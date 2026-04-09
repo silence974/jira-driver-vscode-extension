@@ -69,11 +69,14 @@ Store the AI API key with the command:
 ## Development
 
 ```bash
+nvm use
 npm install
 npm test
+npm run package
 ```
 
 The extension is compiled with plain TypeScript into `dist/`.
+Packaging uses the local `@vscode/vsce` binary and expects Node 20 as defined in `.nvmrc`.
 
 ### Local F5 Debugging
 
