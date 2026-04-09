@@ -23,11 +23,9 @@
 - 只支持 Atlassian Cloud。
 - 用户通过配置填写：
   - `jiraDriver.siteUrl`
-  - `jiraDriver.oauth.clientId`
-  - `jiraDriver.oauth.scopes`
-- 实现 OAuth 2.0 3LO + PKCE 浏览器登录流程。
-- 登录后调用 `accessible-resources` 绑定 `siteUrl` 对应的 `cloudId`。
-- 统一通过 `https://api.atlassian.com/ex/jira/<cloudId>/rest/api/3/*` 访问 Jira REST API。
+  - `jiraDriver.auth.email`
+- 登录时输入 Jira API token/API key，保存在 VS Code SecretStorage。
+- 统一通过 `https://<siteUrl>/rest/api/3/*` 访问 Jira REST API。
 
 ### 3. Issue 发现与展示
 
@@ -121,8 +119,7 @@
 ### 8. 测试目标
 
 - 单元测试：
-  - OAuth 回调解析
-  - `accessible-resources` 站点匹配
+  - 认证头构造
   - JQL 构造
   - 规则评分
   - LLM 响应解析
@@ -146,6 +143,31 @@
 - 只支持 Atlassian Cloud。
 - 不直接驱动外部 AI 插件命令。
 - 第一版通过生成 handoff 材料来对接 Codex / Continue / Copilot Chat 等 AI 工作流。
+
+## 当前进度
+
+- 已完成 TypeScript VS Code 扩展骨架、`package.json`、`tsconfig.json`、Activity Bar、TreeView、WebviewView 和命令注册。
+- 已完成 Jira Cloud `siteUrl + email + API token/API key` 登录实现。
+- 已完成 Jira REST API 客户端、issue 列表获取、issue 详情获取和评论发送。
+- 已完成推荐 issue、我的待办、项目筛选、关键词搜索和基于 OpenAI-compatible 接口的语义重排。
+- 已完成规则评分、LLM 语义评分、缺失信息汇总和补充信息评论草稿生成。
+- 已完成 AI handoff 文件生成，包括 `.jira-driver/tasks/<ISSUE_KEY>/README.md`、`prompt.md`、`task.json`，并自动写入 `.git/info/exclude`。
+- 已完成基础自动化测试，当前 `npm test` 通过。
+- 已完成本地 F5 调试配置，仓库内已提供 `.vscode/launch.json` 和 `.vscode/tasks.json`。
+- 已补充本地调试引导：F5 会直接打开当前仓库，首次点击 `Sign In` 会引导填写 `jiraDriver.siteUrl`、`jiraDriver.auth.email` 和 Jira API token。
+
+## 当前阻塞与已知缺口
+
+- 尚未补真实 Atlassian OAuth / Jira API 的端到端集成测试，当前以纯逻辑测试和服务层实现为主。
+- 语义匹配和语义评分依赖外部 OpenAI-compatible API；如果未配置 API key，会自动退化为非 LLM 路径。
+- 目前还没有完整的 VS Code UI 自动化测试，只有详情页渲染级 smoke test。
+
+## 下一步最小动作
+
+1. 在本机 VS Code 中用真实 `jiraDriver.siteUrl`、`jiraDriver.auth.email` 和 Jira API token 跑一次登录。
+2. 验证 `Issue Explorer` 能拉取到真实 Jira。
+3. 用一个低质量 issue 验证评分和评论草稿回写。
+4. 用一个高质量 issue 验证 `.jira-driver/tasks/` handoff 产物和 prompt 流程。
 
 ## 恢复任务时优先检查
 

@@ -1,0 +1,194 @@
+{
+  "name": "jira-driver-vscode-extension",
+  "displayName": "Jira Driver",
+  "description": "A Jira-driven AI workflow extension for VS Code.",
+  "version": "0.0.1",
+  "publisher": "silence974",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:silence974/jira-driver-vscode-extension.git"
+  },
+  "engines": {
+    "vscode": "^1.89.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:jiraDriver.issueExplorer",
+    "onView:jiraDriver.issueDetail",
+    "onCommand:jiraDriver.signIn",
+    "onCommand:jiraDriver.signOut",
+    "onCommand:jiraDriver.refreshIssues",
+    "onCommand:jiraDriver.searchIssues",
+    "onCommand:jiraDriver.scoreIssue",
+    "onCommand:jiraDriver.requestMoreInfo",
+    "onCommand:jiraDriver.prepareAiFix",
+    "onCommand:jiraDriver.setAiApiKey"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "jiraDriver.signIn",
+        "title": "Jira Driver: Sign In"
+      },
+      {
+        "command": "jiraDriver.signOut",
+        "title": "Jira Driver: Sign Out"
+      },
+      {
+        "command": "jiraDriver.refreshIssues",
+        "title": "Jira Driver: Refresh Issues"
+      },
+      {
+        "command": "jiraDriver.searchIssues",
+        "title": "Jira Driver: Search Issues"
+      },
+      {
+        "command": "jiraDriver.scoreIssue",
+        "title": "Jira Driver: Score Issue"
+      },
+      {
+        "command": "jiraDriver.requestMoreInfo",
+        "title": "Jira Driver: Request More Info"
+      },
+      {
+        "command": "jiraDriver.prepareAiFix",
+        "title": "Jira Driver: Prepare AI Fix"
+      },
+      {
+        "command": "jiraDriver.setAiApiKey",
+        "title": "Jira Driver: Set AI API Key"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "jiraDriver",
+          "title": "Jira Driver",
+          "icon": "media/jira-driver.svg"
+        }
+      ]
+    },
+    "views": {
+      "jiraDriver": [
+        {
+          "type": "tree",
+          "id": "jiraDriver.issueExplorer",
+          "name": "Issue Explorer"
+        },
+        {
+          "type": "webview",
+          "id": "jiraDriver.issueDetail",
+          "name": "Issue Detail"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "jiraDriver.signIn",
+          "when": "view == jiraDriver.issueExplorer && !jiraDriver.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "jiraDriver.refreshIssues",
+          "when": "view == jiraDriver.issueExplorer && jiraDriver.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "jiraDriver.searchIssues",
+          "when": "view == jiraDriver.issueExplorer && jiraDriver.signedIn",
+          "group": "navigation@2"
+        },
+        {
+          "command": "jiraDriver.setAiApiKey",
+          "when": "view == jiraDriver.issueDetail",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Jira Driver",
+      "properties": {
+        "jiraDriver.siteUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Jira Cloud site URL, for example `https://your-domain.atlassian.net`."
+        },
+        "jiraDriver.auth.email": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Email address used with the Jira Cloud API token/API key."
+        },
+        "jiraDriver.discovery.defaultProjects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Default Jira project keys used for the Project Results group."
+        },
+        "jiraDriver.discovery.savedJqls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Optional saved JQL filters that will be merged into Project Results."
+        },
+        "jiraDriver.ai.baseUrl": {
+          "type": "string",
+          "default": "https://api.deepseek.com",
+          "markdownDescription": "OpenAI-compatible base URL. DeepSeek-compatible endpoints are supported."
+        },
+        "jiraDriver.ai.chatModel": {
+          "type": "string",
+          "default": "deepseek-chat",
+          "markdownDescription": "Chat model name used for semantic scoring and reranking."
+        },
+        "jiraDriver.ai.embeddingModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional embedding model used for semantic similarity."
+        },
+        "jiraDriver.ai.includeCodeContext": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Whether to send limited local code snippets and repository context to the model."
+        },
+        "jiraDriver.ai.maxSnippetCount": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 10,
+          "markdownDescription": "Maximum number of local code snippets included in semantic analysis and AI handoff material."
+        },
+        "jiraDriver.workflow.scoreThreshold": {
+          "type": "number",
+          "default": 75,
+          "minimum": 0,
+          "maximum": 100,
+          "markdownDescription": "Minimum issue quality score required before AI handoff can be prepared."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "test": "npm run clean && npm run compile && mocha \"dist/test/**/*.test.js\"",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.17.57",
+    "@types/vscode": "^1.89.0",
+    "mocha": "^11.7.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,6 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jira Driver">
+  <rect width="128" height="128" rx="24" fill="#0F172A"/>
+  <path d="M32 38C32 31.373 37.373 26 44 26H92V42H48V90H32V38Z" fill="#38BDF8"/>
+  <path d="M52 52C52 45.373 57.373 40 64 40H108V56H68V102H52V52Z" fill="#F59E0B"/>
+  <path d="M74 62H96V78H90V102H74V62Z" fill="#F8FAFC"/>
+</svg>
