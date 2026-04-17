@@ -54,11 +54,13 @@
       },
       {
         "command": "jiraDriver.refreshConfluence",
-        "title": "Jira Driver: Refresh Confluence Spaces"
+        "title": "Jira Driver: Refresh Confluence Spaces",
+        "shortTitle": "Refresh"
       },
       {
         "command": "jiraDriver.searchConfluencePages",
-        "title": "Jira Driver: Search Confluence Pages"
+        "title": "Jira Driver: Search Confluence Pages",
+        "shortTitle": "Search"
       },
       {
         "command": "jiraDriver.exportConfluenceMarkdown",
@@ -132,11 +134,6 @@
           "group": "navigation@2"
         },
         {
-          "command": "jiraDriver.signIn",
-          "when": "view == jiraDriver.confluenceExplorer && !jiraDriver.signedIn",
-          "group": "navigation@1"
-        },
-        {
           "command": "jiraDriver.refreshConfluence",
           "when": "view == jiraDriver.confluenceExplorer && jiraDriver.signedIn",
           "group": "navigation@1"
@@ -147,21 +144,9 @@
           "group": "navigation@2"
         },
         {
-          "command": "jiraDriver.exportConfluenceMarkdown",
-          "when": "view == jiraDriver.confluenceDetail && jiraDriver.signedIn",
-          "group": "navigation@3"
-        },
-        {
           "command": "jiraDriver.setAiApiKey",
           "when": "view == jiraDriver.issueDetail",
           "group": "navigation@3"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "jiraDriver.exportConfluenceMarkdown",
-          "when": "view == jiraDriver.confluenceExplorer && viewItem == jiraDriver.confluencePage && jiraDriver.signedIn",
-          "group": "inline@1"
         }
       ]
     },

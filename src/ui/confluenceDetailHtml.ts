@@ -123,8 +123,6 @@ export function renderConfluenceDetailHtml(state: AppState, nonce: string): stri
 
         <section class="card stack">
           <div class="actions">
-            <button data-action="refreshConfluence" class="secondary">Refresh Spaces</button>
-            <button data-action="searchConfluencePages">Search Pages</button>
             <button data-action="exportConfluenceMarkdown">Export Markdown</button>
             <button data-action="openSelectedConfluenceInBrowser" class="secondary">Open in Browser</button>
           </div>
@@ -153,10 +151,7 @@ function renderSignedOut(): string {
   return `
     <section class="card stack">
       <h1>Connect Atlassian</h1>
-      <p class="muted">Sign in once with your Jira Cloud site, email, and API token to browse Jira and Confluence content.</p>
-      <div class="actions">
-        <button data-action="signIn">Sign In</button>
-      </div>
+      <p class="muted">Use the Sign In button in the Issue Explorer toolbar to configure your Jira Cloud site, email, and API token before browsing Jira and Confluence content.</p>
     </section>
   `;
 }
@@ -169,11 +164,7 @@ function renderEmptyState(state: AppState): string {
   return `
     <section class="card stack">
       <h1>Select a Confluence page</h1>
-      <p class="muted">Use Confluence Explorer to browse the page tree for ${escapeHtml(scope)}, or run a page search to jump straight to relevant documentation.</p>
-      <div class="actions">
-        <button data-action="refreshConfluence" class="secondary">Refresh Spaces</button>
-        <button data-action="searchConfluencePages">Search Pages</button>
-      </div>
+      <p class="muted">Use the Confluence Explorer toolbar to refresh ${escapeHtml(scope)} or search for a page, then open one result here for preview and export.</p>
     </section>
   `;
 }

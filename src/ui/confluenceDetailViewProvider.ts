@@ -5,9 +5,6 @@ import { JiraDriverStore } from "./stateStore";
 import { renderConfluenceDetailHtml } from "./confluenceDetailHtml";
 
 interface ConfluenceDetailActions {
-  signIn(): Promise<void>;
-  refreshConfluence(): Promise<void>;
-  searchConfluencePages(): Promise<void>;
   openSelectedConfluenceInBrowser(): Promise<void>;
   exportConfluenceMarkdown(): Promise<void>;
 }
@@ -30,15 +27,6 @@ export class ConfluenceDetailViewProvider implements vscode.WebviewViewProvider 
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
       switch (message.action) {
-        case "signIn":
-          await this.actions.signIn();
-          break;
-        case "refreshConfluence":
-          await this.actions.refreshConfluence();
-          break;
-        case "searchConfluencePages":
-          await this.actions.searchConfluencePages();
-          break;
         case "openSelectedConfluenceInBrowser":
           await this.actions.openSelectedConfluenceInBrowser();
           break;

@@ -131,10 +131,8 @@ export function renderIssueDetailHtml(state: AppState, nonce: string): string {
 
         <section class="card stack">
           <div class="actions">
-            <button data-action="refreshIssues" class="secondary">Refresh</button>
             <button data-action="scoreIssue">Score Issue</button>
             <button data-action="prepareAiFix">Prepare AI Fix</button>
-            <button data-action="setAiApiKey" class="secondary">Set AI API Key</button>
           </div>
         </section>
 
@@ -188,9 +186,9 @@ export function renderIssueDetailHtml(state: AppState, nonce: string): string {
           <h2>AI Handoff</h2>
           ${state.handoffArtifacts ? `
             <p class="muted">${escapeHtml(state.handoffArtifacts.readmePath)}</p>
+            <p class="muted">The startup prompt is copied to your clipboard automatically when handoff files are generated.</p>
             <pre>${escapeHtml(promptPreview)}</pre>
             <div class="actions">
-              <button data-action="copyPrompt">Copy Prompt</button>
               <button data-action="openPrompt" class="secondary">Open Prompt</button>
             </div>
           ` : `<p class="muted">Prepare AI Fix to generate README, prompt, and task metadata under <code>.jira-driver/tasks/&lt;ISSUE_KEY&gt;</code>.</p>`}
@@ -218,10 +216,7 @@ function renderSignedOut(): string {
   return `
     <section class="card stack">
       <h1>Connect Jira</h1>
-      <p class="muted">Click Sign In to configure jiraDriver.siteUrl, jiraDriver.auth.email, and your Jira API token/API key.</p>
-      <div class="actions">
-        <button data-action="signIn">Sign In</button>
-      </div>
+      <p class="muted">Use the Sign In button in the Issue Explorer toolbar to configure jiraDriver.siteUrl, jiraDriver.auth.email, and your Jira API token/API key.</p>
     </section>
   `;
 }

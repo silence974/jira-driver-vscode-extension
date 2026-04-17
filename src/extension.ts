@@ -49,20 +49,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const issueTreeProvider = new IssueTreeProvider(store);
   const issueDetailProvider = new IssueDetailViewProvider(store, {
-    signIn,
-    refreshIssues,
     scoreIssue,
     requestMoreInfo,
     prepareAiFix,
-    setAiApiKey,
-    copyPrompt,
     openPrompt,
   });
   const confluenceTreeProvider = new ConfluenceTreeProvider(store, confluenceExplorerService);
   const confluenceDetailProvider = new ConfluenceDetailViewProvider(store, {
-    signIn,
-    refreshConfluence,
-    searchConfluencePages,
     openSelectedConfluenceInBrowser,
     exportConfluenceMarkdown,
   });

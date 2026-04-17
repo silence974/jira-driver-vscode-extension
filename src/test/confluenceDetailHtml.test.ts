@@ -36,8 +36,9 @@ describe("renderConfluenceDetailHtml", () => {
     );
 
     assert.match(html, /Release checklist/);
-    assert.match(html, /Search Pages/);
     assert.match(html, /Export Markdown/);
     assert.match(html, /Open in Browser/);
+    assert.doesNotMatch(html, /Search Pages/);
+    assert.doesNotMatch(html, /Refresh Spaces/);
   });
 });

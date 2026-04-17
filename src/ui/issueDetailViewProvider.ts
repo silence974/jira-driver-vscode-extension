@@ -5,13 +5,9 @@ import { JiraDriverStore } from "./stateStore";
 import { renderIssueDetailHtml } from "./detailHtml";
 
 interface IssueDetailActions {
-  signIn(): Promise<void>;
-  refreshIssues(): Promise<void>;
   scoreIssue(): Promise<void>;
   requestMoreInfo(draft?: string): Promise<void>;
   prepareAiFix(): Promise<void>;
-  setAiApiKey(): Promise<void>;
-  copyPrompt(): Promise<void>;
   openPrompt(): Promise<void>;
 }
 
@@ -33,12 +29,6 @@ export class IssueDetailViewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage(async (message) => {
       switch (message.action) {
-        case "signIn":
-          await this.actions.signIn();
-          break;
-        case "refreshIssues":
-          await this.actions.refreshIssues();
-          break;
         case "scoreIssue":
           await this.actions.scoreIssue();
           break;
@@ -47,12 +37,6 @@ export class IssueDetailViewProvider implements vscode.WebviewViewProvider {
           break;
         case "prepareAiFix":
           await this.actions.prepareAiFix();
-          break;
-        case "setAiApiKey":
-          await this.actions.setAiApiKey();
-          break;
-        case "copyPrompt":
-          await this.actions.copyPrompt();
           break;
         case "openPrompt":
           await this.actions.openPrompt();

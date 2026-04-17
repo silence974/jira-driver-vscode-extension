@@ -55,6 +55,9 @@ describe("renderIssueDetailHtml", () => {
 
     assert.match(html, /Fix OAuth callback/);
     assert.match(html, /Prepare AI Fix/);
-    assert.match(html, /Copy Prompt/);
+    assert.match(html, /Open Prompt/);
+    assert.doesNotMatch(html, /Refresh/);
+    assert.doesNotMatch(html, /Copy Prompt/);
+    assert.doesNotMatch(html, /Set AI API Key/);
   });
 });
