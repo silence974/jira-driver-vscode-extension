@@ -92,6 +92,7 @@ export interface ConfluencePageSummary {
   spaceId: string;
   spaceKey?: string;
   spaceName?: string;
+  contentType?: string;
   status: string;
   updated: string;
   url: string;

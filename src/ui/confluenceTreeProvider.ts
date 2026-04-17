@@ -100,17 +100,22 @@ export class ConfluenceTreeProvider implements vscode.TreeDataProvider<TreeNode>
     item.tooltip = new vscode.MarkdownString(
       [
         `**${page.title}**`,
+        page.contentType ? `\n\nType: ${formatConfluenceContentTypeLabel(page.contentType)}` : "",
         page.spaceName ? `\n\nSpace: ${page.spaceName}` : "",
         page.excerpt ? `\n\n${page.excerpt}` : "",
       ].join(""),
     );
-    item.contextValue = "jiraDriver.confluencePage";
-    item.iconPath = new vscode.ThemeIcon("book");
-    item.command = {
-      command: "jiraDriver.openConfluencePage",
-      title: "Open Confluence Page",
-      arguments: [page.id],
-    };
+    item.contextValue = page.contentType === "folder"
+      ? "jiraDriver.confluenceFolder"
+      : "jiraDriver.confluencePage";
+    item.iconPath = new vscode.ThemeIcon(getConfluenceContentIconName(page.contentType));
+    if (isOpenableConfluencePage(page)) {
+      item.command = {
+        command: "jiraDriver.openConfluencePage",
+        title: "Open Confluence Page",
+        arguments: [page.id],
+      };
+    }
     return item;
   }
 
@@ -199,4 +204,40 @@ function formatSelectedSpaceSummary(
 
 function formatSpaceCategoryLabel(space: ConfluenceSpaceSummary): string {
   return space.category === "personal" ? "Personal" : "Project";
+}
+
+function isOpenableConfluencePage(page: ConfluencePageSummary): boolean {
+  return !page.contentType || page.contentType === "page";
+}
+
+function getConfluenceContentIconName(contentType: string | undefined): string {
+  switch (contentType) {
+    case "folder":
+      return "folder";
+    case "database":
+      return "table";
+    case "embed":
+      return "link";
+    case "whiteboard":
+      return "layout";
+    default:
+      return "book";
+  }
+}
+
+function formatConfluenceContentTypeLabel(contentType: string): string {
+  switch (contentType) {
+    case "folder":
+      return "Folder";
+    case "database":
+      return "Database";
+    case "embed":
+      return "Embed";
+    case "whiteboard":
+      return "Whiteboard";
+    case "page":
+      return "Page";
+    default:
+      return contentType;
+  }
 }

@@ -14,15 +14,13 @@ interface ConfluenceApiLinks {
   webui?: string;
 }
 
-interface ConfluenceV2SpaceResponse {
-  results?: ConfluenceV2SpaceApiModel[];
+interface ConfluenceV2CollectionResponse<T> {
+  results?: T[];
   _links?: ConfluenceApiLinks;
 }
 
-interface ConfluenceV2PageResponse {
-  results?: ConfluenceV2PageApiModel[];
-  _links?: ConfluenceApiLinks;
-}
+type ConfluenceV2SpaceResponse = ConfluenceV2CollectionResponse<ConfluenceV2SpaceApiModel>;
+type ConfluenceV2PageResponse = ConfluenceV2CollectionResponse<ConfluenceV2PageApiModel>;
 
 interface ConfluenceV2SpaceApiModel {
   id: string;
@@ -35,6 +33,7 @@ interface ConfluenceV2SpaceApiModel {
 
 interface ConfluenceV2PageApiModel {
   id: string;
+  type?: string;
   title?: string;
   status?: string;
   spaceId?: string;
@@ -106,7 +105,6 @@ export class ConfluenceClient {
     spaceKeys: string[] = [],
     maxResults = DEFAULT_SPACE_LIMIT,
   ): Promise<ConfluenceSpaceSummary[]> {
-    const siteUrl = await this.authProvider.getSiteUrl();
     const params = new URLSearchParams({
       limit: String(Math.max(1, maxResults)),
     });
@@ -115,18 +113,10 @@ export class ConfluenceClient {
       params.append("keys", spaceKey);
     }
 
-    const spaces: ConfluenceSpaceSummary[] = [];
-    let nextPath: string | undefined = `/spaces?${params.toString()}`;
-    let pageCount = 0;
-
-    while (nextPath && pageCount < 20) {
-      const response = await this.requestV2<ConfluenceV2SpaceResponse>(nextPath);
-      const baseUrl = response._links?.base ?? siteUrl;
-
-      spaces.push(...(response.results ?? []).map((space) => mapSpaceSummary(space, baseUrl)));
-      nextPath = normalizeNextPath(response._links?.next);
-      pageCount += 1;
-    }
+    const { baseUrl, results } = await this.collectPaginatedV2Results<ConfluenceV2SpaceApiModel>(
+      `/spaces?${params.toString()}`,
+    );
+    const spaces = results.map((space) => mapSpaceSummary(space, baseUrl));
 
     return dedupeSpaces(spaces).sort(compareSpacePriority);
   }
@@ -135,38 +125,39 @@ export class ConfluenceClient {
     spaceId: string,
     maxResults = DEFAULT_PAGE_LIMIT,
   ): Promise<ConfluencePageSummary[]> {
-    const siteUrl = await this.authProvider.getSiteUrl();
     const params = new URLSearchParams({
       depth: "root",
       limit: String(Math.max(1, maxResults)),
     });
     params.append("status", "current");
 
-    const response = await this.requestV2<ConfluenceV2PageResponse>(
+    const { baseUrl, results } = await this.collectPaginatedV2Results<ConfluenceV2PageApiModel>(
       `/spaces/${encodeURIComponent(spaceId)}/pages?${params.toString()}`,
     );
-    const baseUrl = response._links?.base ?? siteUrl;
 
-    return (response.results ?? [])
+    return results
       .sort(compareV2PageOrder)
       .map((page) => mapV2PageSummary(page, baseUrl));
   }
 
   public async listPageChildren(
-    pageId: string,
+    parentContent: Pick<ConfluencePageSummary, "id" | "contentType">,
     maxResults = DEFAULT_PAGE_LIMIT,
   ): Promise<ConfluencePageSummary[]> {
-    const siteUrl = await this.authProvider.getSiteUrl();
+    const path = buildDirectChildrenPath(parentContent);
+    if (!path) {
+      return [];
+    }
+
     const params = new URLSearchParams({
       limit: String(Math.max(1, maxResults)),
     });
 
-    const response = await this.requestV2<ConfluenceV2PageResponse>(
-      `/pages/${encodeURIComponent(pageId)}/children?${params.toString()}`,
+    const { baseUrl, results } = await this.collectPaginatedV2Results<ConfluenceV2PageApiModel>(
+      `${path}?${params.toString()}`,
     );
-    const baseUrl = response._links?.base ?? siteUrl;
 
-    return (response.results ?? [])
+    return results
       .sort(compareV2PageOrder)
       .map((page) => mapV2PageSummary(page, baseUrl));
   }
@@ -253,6 +244,24 @@ export class ConfluenceClient {
 
     return (await response.json()) as T;
   }
+
+  private async collectPaginatedV2Results<T>(path: string): Promise<{ baseUrl: string; results: T[] }> {
+    const siteUrl = await this.authProvider.getSiteUrl();
+    const results: T[] = [];
+    let baseUrl = siteUrl;
+    let nextPath: string | undefined = path;
+    let pageCount = 0;
+
+    while (nextPath && pageCount < 20) {
+      const response = await this.requestV2<ConfluenceV2CollectionResponse<T>>(nextPath);
+      baseUrl = response._links?.base ?? baseUrl;
+      results.push(...(response.results ?? []));
+      nextPath = normalizeNextPath(response._links?.next);
+      pageCount += 1;
+    }
+
+    return { baseUrl, results };
+  }
 }
 
 function mapSpaceSummary(space: ConfluenceV2SpaceApiModel, baseUrl: string): ConfluenceSpaceSummary {
@@ -320,6 +329,7 @@ function mapV2PageSummary(page: ConfluenceV2PageApiModel, baseUrl: string): Conf
     id: String(page.id ?? ""),
     title: page.title ?? `Page ${page.id}`,
     spaceId: String(page.spaceId ?? ""),
+    contentType: normalizeConfluenceContentType(page.type) ?? "page",
     status: page.status ?? "current",
     updated: page.version?.createdAt ?? page.createdAt ?? "",
     url: resolveConfluenceUrl(
@@ -339,6 +349,7 @@ function mapContentSummary(page: ConfluenceContentApiModel, baseUrl: string): Co
     spaceId: String(page.space?.id ?? ""),
     spaceKey: page.space?.key,
     spaceName: page.space?.name,
+    contentType: "page",
     status: page.status ?? "current",
     updated: page.version?.when ?? "",
     url: resolveConfluenceUrl(
@@ -387,6 +398,35 @@ function compareV2PageOrder(left: ConfluenceV2PageApiModel, right: ConfluenceV2P
   const leftOrder = left.childPosition ?? left.position ?? Number.MAX_SAFE_INTEGER;
   const rightOrder = right.childPosition ?? right.position ?? Number.MAX_SAFE_INTEGER;
   return leftOrder - rightOrder || (left.title ?? "").localeCompare(right.title ?? "");
+}
+
+function normalizeConfluenceContentType(type: string | undefined): string | undefined {
+  const normalized = type?.trim().toLowerCase();
+  return normalized || undefined;
+}
+
+function buildDirectChildrenPath(
+  parentContent: Pick<ConfluencePageSummary, "id" | "contentType">,
+): string | undefined {
+  const normalizedType = normalizeConfluenceContentType(parentContent.contentType) ?? "page";
+  const encodedId = encodeURIComponent(parentContent.id);
+
+  switch (normalizedType) {
+    case "page":
+      return `/pages/${encodedId}/direct-children`;
+    case "folder":
+      return `/folders/${encodedId}/direct-children`;
+    case "database":
+      return `/databases/${encodedId}/direct-children`;
+    case "embed":
+      return `/embeds/${encodedId}/direct-children`;
+    case "whiteboard":
+      return `/whiteboards/${encodedId}/direct-children`;
+    case "custom-content":
+      return `/custom-content/${encodedId}/children`;
+    default:
+      return undefined;
+  }
 }
 
 function resolveConfluenceUrl(baseUrl: string, webUiPath: string | undefined, fallbackPath: string): string {

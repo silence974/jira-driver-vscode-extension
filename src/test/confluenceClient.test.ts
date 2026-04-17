@@ -186,6 +186,77 @@ describe("ConfluenceClient", () => {
     }
   });
 
+  it("loads mixed direct children so folder nodes like Tools are not dropped", async () => {
+    const calls: string[] = [];
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      calls.push(String(input));
+      return new Response(
+        JSON.stringify({
+          results: [
+            {
+              id: "folder-1",
+              type: "folder",
+              title: "Tools",
+              status: "current",
+              spaceId: "42",
+              childPosition: 15,
+            },
+            {
+              id: "page-1",
+              type: "page",
+              title: "Commodity",
+              status: "current",
+              spaceId: "42",
+              childPosition: 20,
+            },
+          ],
+          _links: {
+            base: "https://example.atlassian.net",
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }) as typeof fetch;
+
+    try {
+      const client = new ConfluenceClient({
+        async getSession() {
+          return {
+            siteUrl: "https://example.atlassian.net",
+            email: "dev@example.com",
+          };
+        },
+        async getAuthorizationHeader() {
+          return "Basic ZGV2QGV4YW1wbGUuY29tOnRva2Vu";
+        },
+        async getSiteUrl() {
+          return "https://example.atlassian.net";
+        },
+      });
+
+      const children = await client.listPageChildren({
+        id: "123",
+        contentType: "page",
+      });
+
+      assert.equal(calls.length, 1);
+      assert.match(calls[0], /\/wiki\/api\/v2\/pages\/123\/direct-children\?/);
+      assert.equal(children.length, 2);
+      assert.equal(children[0].title, "Tools");
+      assert.equal(children[0].contentType, "folder");
+      assert.equal(children[1].contentType, "page");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("loads page export HTML when fetching page details", async () => {
     const calls: string[] = [];
     const originalFetch = globalThis.fetch;

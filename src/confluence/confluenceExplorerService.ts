@@ -56,7 +56,7 @@ export class ConfluenceExplorerService {
     }
 
     const pages = this.decoratePages(
-      await this.confluenceClient.listPageChildren(parentPage.id),
+      await this.confluenceClient.listPageChildren(parentPage),
       this.buildSpaceInfo(parentPage),
     );
     this.cachePages(pages);

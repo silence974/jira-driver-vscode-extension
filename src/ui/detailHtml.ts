@@ -30,15 +30,33 @@ export function renderIssueDetailHtml(state: AppState, nonce: string): string {
         --surface-alt: color-mix(in srgb, var(--bg) 92%, white 8%);
         --surface-deep: color-mix(in srgb, var(--bg) 88%, black 12%);
       }
+      html {
+        min-height: 100%;
+        background: var(--bg);
+      }
       body {
         margin: 0;
         padding: 18px;
+        min-height: 100vh;
+        box-sizing: border-box;
+        position: relative;
+        isolation: isolate;
         font: 13px/1.5 var(--vscode-font-family);
         color: var(--fg);
+        background: transparent;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
         background:
           radial-gradient(circle at top left, var(--glow-a), transparent 30%),
           radial-gradient(circle at top right, var(--glow-b), transparent 32%),
           linear-gradient(180deg, color-mix(in srgb, var(--bg) 96%, white 4%), var(--bg));
+        background-repeat: no-repeat;
+        background-size: 140% 140%, 140% 140%, 100% 100%;
       }
       .stack { display: grid; gap: 14px; }
       .card {
