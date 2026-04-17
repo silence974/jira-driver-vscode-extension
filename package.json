@@ -208,7 +208,7 @@
             "type": "string"
           },
           "default": [],
-          "markdownDescription": "Optional Confluence space keys used to scope page browsing and search. Leave empty to browse all visible spaces."
+          "markdownDescription": "Optional preferred Confluence space keys kept for compatibility. Confluence Explorer now loads all visible spaces and lets you filter them in the UI."
         },
         "jiraDriver.ai.baseUrl": {
           "type": "string",

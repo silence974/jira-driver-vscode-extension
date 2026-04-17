@@ -13,6 +13,7 @@ describe("renderConfluenceDetailHtml", () => {
         issueExplorerFilters: {},
         issueSearchResults: undefined,
         confluenceSpaces: [],
+        selectedConfluenceSpaceKeys: [],
         confluenceSearchResults: [],
         selectedConfluencePage: {
           id: "123",

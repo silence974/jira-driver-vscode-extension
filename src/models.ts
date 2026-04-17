@@ -80,6 +80,8 @@ export interface ConfluenceSpaceSummary {
   id: string;
   key: string;
   name: string;
+  type?: string;
+  category: "project" | "personal";
   homepageId?: string;
   url: string;
 }
@@ -204,6 +206,7 @@ export interface AppState {
   issueExplorerFilters: JiraProjectFilterSelection;
   issueSearchResults?: JiraIssueSummary[];
   confluenceSpaces: ConfluenceSpaceSummary[];
+  selectedConfluenceSpaceKeys: string[];
   confluenceSearchQuery?: string;
   confluenceSearchResults: ConfluencePageSummary[];
   selectedIssue?: JiraIssueDetail;

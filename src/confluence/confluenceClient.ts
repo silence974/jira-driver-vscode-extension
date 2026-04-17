@@ -28,6 +28,7 @@ interface ConfluenceV2SpaceApiModel {
   id: string;
   key?: string;
   name?: string;
+  type?: string;
   homepageId?: string;
   _links?: ConfluenceApiLinks;
 }
@@ -114,12 +115,20 @@ export class ConfluenceClient {
       params.append("keys", spaceKey);
     }
 
-    const response = await this.requestV2<ConfluenceV2SpaceResponse>(`/spaces?${params.toString()}`);
-    const baseUrl = response._links?.base ?? siteUrl;
+    const spaces: ConfluenceSpaceSummary[] = [];
+    let nextPath: string | undefined = `/spaces?${params.toString()}`;
+    let pageCount = 0;
 
-    return (response.results ?? [])
-      .map((space) => mapSpaceSummary(space, baseUrl))
-      .sort((left, right) => left.name.localeCompare(right.name));
+    while (nextPath && pageCount < 20) {
+      const response = await this.requestV2<ConfluenceV2SpaceResponse>(nextPath);
+      const baseUrl = response._links?.base ?? siteUrl;
+
+      spaces.push(...(response.results ?? []).map((space) => mapSpaceSummary(space, baseUrl)));
+      nextPath = normalizeNextPath(response._links?.next);
+      pageCount += 1;
+    }
+
+    return dedupeSpaces(spaces).sort(compareSpacePriority);
   }
 
   public async listRootPages(
@@ -247,10 +256,13 @@ export class ConfluenceClient {
 }
 
 function mapSpaceSummary(space: ConfluenceV2SpaceApiModel, baseUrl: string): ConfluenceSpaceSummary {
+  const type = space.type?.trim();
   return {
     id: String(space.id ?? ""),
     key: space.key ?? "SPACE",
     name: space.name ?? space.key ?? "Untitled space",
+    type,
+    category: classifySpaceCategory(type),
     homepageId: space.homepageId ? String(space.homepageId) : undefined,
     url: resolveConfluenceUrl(
       baseUrl,
@@ -258,6 +270,49 @@ function mapSpaceSummary(space: ConfluenceV2SpaceApiModel, baseUrl: string): Con
       `/wiki/spaces/${encodeURIComponent(space.key ?? "")}`,
     ),
   };
+}
+
+function classifySpaceCategory(type: string | undefined): "project" | "personal" {
+  return type?.toLowerCase() === "personal" ? "personal" : "project";
+}
+
+function compareSpacePriority(left: ConfluenceSpaceSummary, right: ConfluenceSpaceSummary): number {
+  if (left.category !== right.category) {
+    return left.category === "project" ? -1 : 1;
+  }
+
+  return left.name.localeCompare(right.name);
+}
+
+function dedupeSpaces(spaces: ConfluenceSpaceSummary[]): ConfluenceSpaceSummary[] {
+  const seen = new Set<string>();
+  return spaces.filter((space) => {
+    if (seen.has(space.id)) {
+      return false;
+    }
+
+    seen.add(space.id);
+    return true;
+  });
+}
+
+function normalizeNextPath(next: string | undefined): string | undefined {
+  if (!next) {
+    return undefined;
+  }
+
+  if (/^https?:\/\//i.test(next)) {
+    const url = new URL(next);
+    return stripV2Prefix(`${url.pathname}${url.search}`);
+  }
+
+  return stripV2Prefix(next.startsWith("/") ? next : `/${next}`);
+}
+
+function stripV2Prefix(path: string): string {
+  return path.startsWith("/wiki/api/v2")
+    ? path.slice("/wiki/api/v2".length) || "/"
+    : path;
 }
 
 function mapV2PageSummary(page: ConfluenceV2PageApiModel, baseUrl: string): ConfluencePageSummary {

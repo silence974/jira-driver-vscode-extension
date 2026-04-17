@@ -158,6 +158,8 @@
 - 已补充本地调试引导：F5 会直接打开当前仓库，首次点击 `Sign In` 会引导填写 `jiraDriver.siteUrl`、`jiraDriver.auth.email` 和 Jira API token。
 - 已完成本地打包链路验证，可在 Node 20 下执行 `npm run package` 生成 `.vsix`。
 - 已将 Jira Explorer 调整为筛选优先结构：顶部提供 `Project / Type / Status / Assignee` 四个筛选节点，默认不显示任何项目内容，选中项目后结果直接显示在筛选项下方。
+- 已将 Confluence Explorer 调整为筛选优先结构：顶部提供 `Space` 多选筛选节点，默认不显示任何 Space 内容，选中 Space 后仅展示这些 Space 的页面树，搜索也只作用于已选 Space。
+- 已补 Confluence Space 全量分页拉取，并基于 Confluence Space `type` 区分项目/共享 Space 与个人 Space，列表和选择器都会优先展示项目/共享 Space。
 - 已完成 Confluence 页面浏览与搜索的最小实现，包括 Space 列表、页面关键词搜索、按页面层级展开的目录树浏览，以及 Confluence 页面详情预览。
 - 已完成 Confluence 页面导出为 Markdown 的最小实现，支持从详情页或命令导出本地 `.md` 文件，并尽量保留页面元信息与链接。
 - 已精简主要 UI 操作入口：列表视图保留发现类操作，详情视图保留当前对象操作，移除了重复按钮入口。

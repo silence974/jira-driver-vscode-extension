@@ -95,6 +95,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("jiraDriver.searchIssues", searchIssues),
     vscode.commands.registerCommand("jiraDriver.refreshConfluence", refreshConfluence),
     vscode.commands.registerCommand("jiraDriver.searchConfluencePages", searchConfluencePages),
+    vscode.commands.registerCommand("jiraDriver.pickConfluenceSpaceFilter", pickConfluenceSpaceFilter),
     vscode.commands.registerCommand("jiraDriver.openIssue", openIssue),
     vscode.commands.registerCommand("jiraDriver.openConfluencePage", openConfluencePage),
     vscode.commands.registerCommand("jiraDriver.exportConfluenceMarkdown", exportConfluenceMarkdown),
@@ -183,24 +184,62 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function searchConfluencePages(): Promise<void> {
+    const selectedSpaceKeys = store.getState().selectedConfluenceSpaceKeys;
+    if (!selectedSpaceKeys.length) {
+      vscode.window.showWarningMessage("Select one or more Confluence spaces first.");
+      return;
+    }
+
     const query = await vscode.window.showInputBox({
       title: "Search Confluence Pages",
-      prompt: "Enter a keyword or phrase to search across Confluence pages.",
+      prompt: "Enter a keyword or phrase to search across the selected Confluence spaces. Submit an empty value to clear the current search.",
       ignoreFocusOut: true,
+      value: store.getState().confluenceSearchQuery ?? "",
     });
 
-    if (!query?.trim()) {
+    if (query === undefined) {
+      return;
+    }
+
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      store.setConfluenceSearchResults(undefined, []);
       return;
     }
 
     await runAction("Searching Confluence pages...", async () => {
       requireSignedIn();
       const pages = await confluenceClient.searchPages(
-        query.trim(),
-        getSettings().confluenceSpaceKeys,
+        trimmedQuery,
+        selectedSpaceKeys,
       );
-      store.setConfluenceSearchResults(query.trim(), pages);
+      store.setConfluenceSearchResults(trimmedQuery, pages);
     });
+  }
+
+  async function pickConfluenceSpaceFilter(): Promise<void> {
+    const selection = await vscode.window.showQuickPick(
+      buildConfluenceSpaceQuickPickItems(
+        store.getState().confluenceSpaces,
+        store.getState().selectedConfluenceSpaceKeys,
+      ),
+      {
+        title: "Select Confluence Spaces",
+        ignoreFocusOut: true,
+        canPickMany: true,
+      },
+    );
+
+    if (!selection) {
+      return;
+    }
+
+    store.setSelectedConfluenceSpaces(
+      selection
+        .map((item) => item.value)
+        .filter((value): value is string => Boolean(value)),
+    );
+    store.setConfluenceSearchResults(undefined, []);
   }
 
   async function openIssue(issueKey?: string): Promise<void> {
@@ -692,4 +731,43 @@ function getVisibleIssues(state: AppState) {
   );
 
   return buildVisibleIssueList(browseIssues, filters, state.issueSearchResults);
+}
+
+function buildConfluenceSpaceQuickPickItems(
+  spaces: AppState["confluenceSpaces"],
+  selectedSpaceKeys: string[],
+): Array<(vscode.QuickPickItem & { value?: string })> {
+  const projectSpaces = spaces.filter((space) => space.category === "project");
+  const personalSpaces = spaces.filter((space) => space.category === "personal");
+  const items: Array<(vscode.QuickPickItem & { value?: string })> = [];
+
+  if (projectSpaces.length) {
+    items.push({
+      label: "Project Spaces",
+      kind: vscode.QuickPickItemKind.Separator,
+    });
+    items.push(...projectSpaces.map((space) => ({
+      label: space.name,
+      description: space.key,
+      detail: space.type && space.type !== "global" ? space.type : "Shared space",
+      picked: selectedSpaceKeys.includes(space.key),
+      value: space.key,
+    })));
+  }
+
+  if (personalSpaces.length) {
+    items.push({
+      label: "Personal Spaces",
+      kind: vscode.QuickPickItemKind.Separator,
+    });
+    items.push(...personalSpaces.map((space) => ({
+      label: space.name,
+      description: space.key,
+      detail: "Personal space",
+      picked: selectedSpaceKeys.includes(space.key),
+      value: space.key,
+    })));
+  }
+
+  return items;
 }

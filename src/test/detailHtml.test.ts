@@ -13,6 +13,7 @@ describe("renderIssueDetailHtml", () => {
         issueExplorerFilters: {},
         issueSearchResults: undefined,
         confluenceSpaces: [],
+        selectedConfluenceSpaceKeys: [],
         confluenceSearchResults: [],
         selectedIssue: {
           id: "1",
@@ -58,7 +59,10 @@ describe("renderIssueDetailHtml", () => {
     );
 
     assert.match(html, /Fix OAuth callback/);
-    assert.match(html, /Prepare AI Fix/);
+    assert.match(html, /aria-label="Score Issue"/);
+    assert.match(html, /aria-label="Prepare AI Fix"/);
+    assert.match(html, /data-action="scoreIssue"/);
+    assert.match(html, /data-action="prepareAiFix"/);
     assert.match(html, /Open Prompt/);
     assert.doesNotMatch(html, /Refresh/);
     assert.doesNotMatch(html, /Copy Prompt/);

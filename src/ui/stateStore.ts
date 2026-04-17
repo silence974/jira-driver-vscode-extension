@@ -24,6 +24,7 @@ export class JiraDriverStore {
     issueExplorerFilters: {},
     issueSearchResults: undefined,
     confluenceSpaces: [],
+    selectedConfluenceSpaceKeys: [],
     confluenceSearchResults: [],
   };
 
@@ -117,7 +118,24 @@ export class JiraDriverStore {
   }
 
   public setConfluenceSpaces(confluenceSpaces: ConfluenceSpaceSummary[]): void {
-    this.patch({ confluenceSpaces });
+    const selectedConfluenceSpaceKeys = this.state.selectedConfluenceSpaceKeys.filter((spaceKey) => (
+      confluenceSpaces.some((space) => space.key === spaceKey)
+    ));
+
+    this.patch({
+      confluenceSpaces,
+      selectedConfluenceSpaceKeys,
+      confluenceSearchQuery: selectedConfluenceSpaceKeys.length ? this.state.confluenceSearchQuery : undefined,
+      confluenceSearchResults: selectedConfluenceSpaceKeys.length ? this.state.confluenceSearchResults : [],
+    });
+  }
+
+  public setSelectedConfluenceSpaces(selectedConfluenceSpaceKeys: string[]): void {
+    this.patch({
+      selectedConfluenceSpaceKeys,
+      confluenceSearchQuery: selectedConfluenceSpaceKeys.length ? this.state.confluenceSearchQuery : undefined,
+      confluenceSearchResults: selectedConfluenceSpaceKeys.length ? this.state.confluenceSearchResults : [],
+    });
   }
 
   public setConfluenceSearchResults(
@@ -177,6 +195,7 @@ export class JiraDriverStore {
       issueExplorerFilters: {},
       issueSearchResults: undefined,
       confluenceSpaces: [],
+      selectedConfluenceSpaceKeys: [],
       confluenceSearchResults: [],
     };
     this.emitter.fire(this.state);

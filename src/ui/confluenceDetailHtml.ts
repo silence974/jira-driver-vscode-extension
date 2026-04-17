@@ -16,28 +16,39 @@ export function renderConfluenceDetailHtml(state: AppState, nonce: string): stri
         --bg: var(--vscode-editor-background);
         --fg: var(--vscode-editor-foreground);
         --muted: var(--vscode-descriptionForeground);
-        --border: var(--vscode-panel-border);
         --card: color-mix(in srgb, var(--bg) 88%, white 12%);
+        --border: var(--vscode-panel-border);
         --accent: var(--vscode-textLink-foreground);
         --danger: var(--vscode-errorForeground);
+        --glow-a: rgba(2,132,199,0.12);
+        --glow-b: rgba(245,158,11,0.12);
+        --button-start: #0284c7;
+        --button-end: #f59e0b;
+        --surface: color-mix(in srgb, var(--card) 94%, transparent);
+        --surface-alt: color-mix(in srgb, var(--bg) 92%, white 8%);
+        --surface-deep: color-mix(in srgb, var(--bg) 88%, black 12%);
       }
       body {
         margin: 0;
         padding: 18px;
-        font: 13px/1.6 var(--vscode-font-family);
+        font: 13px/1.5 var(--vscode-font-family);
         color: var(--fg);
-        background: radial-gradient(circle at top left, rgba(34,197,94,0.12), transparent 32%), radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 34%), var(--bg);
+        background:
+          radial-gradient(circle at top left, var(--glow-a), transparent 30%),
+          radial-gradient(circle at top right, var(--glow-b), transparent 32%),
+          linear-gradient(180deg, color-mix(in srgb, var(--bg) 96%, white 4%), var(--bg));
       }
       .stack { display: grid; gap: 14px; }
       .card {
         border: 1px solid var(--border);
-        background: color-mix(in srgb, var(--card) 92%, transparent);
-        border-radius: 12px;
-        padding: 14px;
+        background: var(--surface);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 10px 28px color-mix(in srgb, var(--bg) 88%, transparent);
       }
       h1, h2, h3 { margin: 0 0 10px; }
-      h1 { font-size: 18px; }
-      h2 { font-size: 14px; color: var(--accent); }
+      h1 { font-size: 17px; line-height: 1.35; }
+      h2 { font-size: 14px; color: var(--accent); letter-spacing: 0.01em; }
       p { margin: 0; }
       .muted { color: var(--muted); }
       .danger { color: var(--danger); }
@@ -49,10 +60,10 @@ export function renderConfluenceDetailHtml(state: AppState, nonce: string): stri
       }
       .pill {
         display: inline-flex;
-        padding: 3px 8px;
+        padding: 4px 10px;
         border-radius: 999px;
         border: 1px solid var(--border);
-        background: color-mix(in srgb, var(--bg) 92%, white 8%);
+        background: var(--surface-alt);
       }
       .actions {
         display: flex;
@@ -69,26 +80,19 @@ export function renderConfluenceDetailHtml(state: AppState, nonce: string): stri
         padding: 7px 12px;
         cursor: pointer;
         color: white;
-        background: linear-gradient(135deg, #059669, #2563eb);
-      }
-      button.compact {
-        padding: 5px 10px;
-        font-size: 12px;
-        font-weight: 600;
-        line-height: 1.2;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+        background: linear-gradient(135deg, var(--button-start), var(--button-end));
       }
       button.icon {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         padding: 0;
         box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
       }
       button.secondary {
-        background: color-mix(in srgb, var(--bg) 82%, white 18%);
+        background: var(--surface-alt);
         color: var(--fg);
         border: 1px solid var(--border);
       }
@@ -127,7 +131,7 @@ export function renderConfluenceDetailHtml(state: AppState, nonce: string): stri
         border-radius: 10px;
         padding: 12px;
         border: 1px solid var(--border);
-        background: color-mix(in srgb, var(--bg) 88%, black 12%);
+        background: var(--surface-deep);
       }
       a { color: var(--accent); }
     </style>
@@ -202,13 +206,13 @@ function renderSignedOut(): string {
 
 function renderEmptyState(state: AppState): string {
   const scope = state.confluenceSpaces.length
-    ? `${state.confluenceSpaces.length} configured spaces`
+    ? `${state.confluenceSpaces.length} visible spaces`
     : "your visible spaces";
 
   return `
     <section class="card stack">
       <h1>Select a Confluence page</h1>
-      <p class="muted">Use the Confluence Explorer toolbar to refresh ${escapeHtml(scope)} or search for a page, then open one result here for preview and export.</p>
+      <p class="muted">Use the Space filter in Confluence Explorer to choose from ${escapeHtml(scope)}, then browse or search within the selected spaces and open one page here for preview and export.</p>
     </section>
   `;
 }

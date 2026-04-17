@@ -19,7 +19,7 @@ export class ConfluenceExplorerService {
   ) {}
 
   public async refreshSpaces(): Promise<ConfluenceSpaceSummary[]> {
-    const spaces = await this.confluenceClient.listSpaces(this.getSettings().confluenceSpaceKeys);
+    const spaces = await this.confluenceClient.listSpaces();
     this.rootPagesBySpaceId.clear();
     this.childPagesByPageId.clear();
     this.spacesById.clear();
