@@ -22,8 +22,12 @@ export class JiraAuthProvider implements vscode.Disposable {
   public dispose(): void {}
 
   public async initialize(): Promise<void> {
-    const signedIn = Boolean((await this.getSession()) && (await this.getApiToken()));
+    const signedIn = await this.hasStoredCredentials();
     await vscode.commands.executeCommand("setContext", EXTENSION_CONTEXT_SIGNED_IN, signedIn);
+  }
+
+  public async hasStoredCredentials(): Promise<boolean> {
+    return Boolean((await this.getSession()) && (await this.getApiToken()));
   }
 
   public async signIn(): Promise<JiraAuthSession> {

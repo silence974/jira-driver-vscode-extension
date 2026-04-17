@@ -354,7 +354,7 @@ function mapContentSummary(page: ConfluenceContentApiModel, baseUrl: string): Co
     updated: page.version?.when ?? "",
     url: resolveConfluenceUrl(
       page._links?.base ?? baseUrl,
-      page._links?.webui,
+      buildCanonicalConfluencePagePath(page.space?.key, page.id, page.title) ?? page._links?.webui,
       `/wiki/pages/viewpage.action?pageId=${encodeURIComponent(String(page.id ?? ""))}`,
     ),
     excerpt: toPlainText(page.excerpt),
@@ -375,20 +375,25 @@ function mapContentDetail(page: ConfluenceContentApiModel, baseUrl: string): Con
     bodyText: toPlainText(bodyExportHtml || bodyHtml),
     versionNumber: page.version?.number,
     updatedByDisplayName: page.version?.by?.displayName,
-    ancestors: (page.ancestors ?? []).map((ancestor) => mapAncestor(ancestor, page._links?.base ?? baseUrl)),
+    ancestors: (page.ancestors ?? []).map((ancestor) => mapAncestor(
+      ancestor,
+      page._links?.base ?? baseUrl,
+      page.space?.key,
+    )),
   };
 }
 
 function mapAncestor(
   ancestor: NonNullable<ConfluenceContentApiModel["ancestors"]>[number],
   baseUrl: string,
+  spaceKey?: string,
 ): ConfluencePageBreadcrumb {
   return {
     id: String(ancestor.id ?? ""),
     title: ancestor.title ?? `Page ${ancestor.id ?? ""}`,
     url: resolveConfluenceUrl(
       baseUrl,
-      ancestor._links?.webui,
+      buildCanonicalConfluencePagePath(spaceKey, ancestor.id, ancestor.title) ?? ancestor._links?.webui,
       `/wiki/pages/viewpage.action?pageId=${encodeURIComponent(String(ancestor.id ?? ""))}`,
     ),
   };
@@ -437,6 +442,35 @@ function resolveConfluenceUrl(baseUrl: string, webUiPath: string | undefined, fa
   } catch {
     return `${normalizedBaseUrl}${fallbackPath}`;
   }
+}
+
+function buildCanonicalConfluencePagePath(
+  spaceKey: string | undefined,
+  pageId: string | number | undefined,
+  title: string | undefined,
+): string | undefined {
+  const normalizedSpaceKey = spaceKey?.trim();
+  const normalizedPageId = String(pageId ?? "").trim();
+  if (!normalizedSpaceKey || !normalizedPageId) {
+    return undefined;
+  }
+
+  const encodedSpaceKey = encodeURIComponent(normalizedSpaceKey);
+  const encodedPageId = encodeURIComponent(normalizedPageId);
+  const encodedTitle = encodeConfluencePageTitle(title);
+
+  return encodedTitle
+    ? `/wiki/spaces/${encodedSpaceKey}/pages/${encodedPageId}/${encodedTitle}`
+    : `/wiki/spaces/${encodedSpaceKey}/pages/${encodedPageId}`;
+}
+
+function encodeConfluencePageTitle(title: string | undefined): string {
+  const normalizedTitle = title?.trim();
+  if (!normalizedTitle) {
+    return "";
+  }
+
+  return encodeURIComponent(normalizedTitle).replace(/%20/g, "+");
 }
 
 function buildSearchCql(query: string, spaceKeys: string[]): string {

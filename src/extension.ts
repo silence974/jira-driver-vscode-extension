@@ -57,7 +57,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const handoffService = new HandoffService();
 
   await authProvider.initialize();
-  store.setSignedIn(Boolean(await authProvider.getSession()));
+  store.setSignedIn(await authProvider.hasStoredCredentials());
 
   const issueTreeProvider = new IssueTreeProvider(store);
   const issueDetailProvider = new IssueDetailViewProvider(store, {
@@ -135,18 +135,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function refreshIssues(): Promise<void> {
     await runAction("Refreshing Jira issues...", async () => {
-      requireSignedIn();
-      const { projects } = await discoveryService.refreshOverview();
-      store.setIssueExplorerData(projects);
-      store.setSignedIn(true);
+      await retryOnce("Refresh Jira issues", async () => {
+        requireSignedIn();
+        const { projects } = await discoveryService.refreshOverview();
+        store.setIssueExplorerData(projects);
+        store.setSignedIn(true);
+      });
     });
   }
 
   async function refreshConfluence(): Promise<void> {
     await runAction("Refreshing Confluence spaces...", async () => {
-      requireSignedIn();
-      const spaces = await confluenceExplorerService.refreshSpaces();
-      store.setConfluenceSpaces(spaces);
+      await retryOnce("Refresh Confluence spaces", async () => {
+        requireSignedIn();
+        const spaces = await confluenceExplorerService.refreshSpaces();
+        store.setConfluenceSpaces(spaces);
+      });
     });
   }
 
@@ -649,6 +653,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     } finally {
       store.setBusyMessage(undefined);
     }
+  }
+
+  async function retryOnce<T>(label: string, action: () => Promise<T>): Promise<T> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        return await action();
+      } catch (error) {
+        lastError = error;
+        output.appendLine(`${label} attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
   async function ensureProjectLoaded(projectKey: string): Promise<void> {

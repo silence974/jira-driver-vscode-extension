@@ -291,7 +291,7 @@ describe("ConfluenceClient", () => {
           ancestors: [],
           _links: {
             base: "https://example.atlassian.net",
-            webui: "/wiki/spaces/ENG/pages/123/Release+checklist",
+            webui: "/spaces/ENG/overview",
           },
         }),
         {
@@ -323,6 +323,7 @@ describe("ConfluenceClient", () => {
 
       assert.equal(calls.length, 1);
       assert.match(decodeURIComponent(calls[0]), /body\.export_view/);
+      assert.equal(page.url, "https://example.atlassian.net/wiki/spaces/ENG/pages/123/Release+checklist");
       assert.equal(page.bodyExportHtml, "<p>Export body</p>");
       assert.equal(page.bodyHtml, "<p>Preview body</p>");
       assert.equal(page.bodyText, "Export body");
