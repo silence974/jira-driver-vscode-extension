@@ -1,14 +1,21 @@
+import * as os from "node:os";
+import * as path from "node:path";
 import * as vscode from "vscode";
 
 import { HandoffService } from "./ai/handoffService";
 import { OpenAICompatibleClient } from "./ai/openAiCompatibleClient";
 import { JiraAuthProvider } from "./auth/jiraAuthProvider";
+import { ConfluenceClient } from "./confluence/confluenceClient";
+import { ConfluenceExplorerService } from "./confluence/confluenceExplorerService";
+import { ConfluenceMarkdownExportService } from "./confluence/confluenceMarkdownExportService";
 import { getSettings } from "./config";
 import { DiscoveryService } from "./discovery/discoveryService";
 import { JiraClient } from "./jira/jiraClient";
 import { buildMoreInfoComment } from "./scoring/commentDraft";
 import { LlmScorer, mergeScoringResults } from "./scoring/llmScorer";
 import { scoreIssueByRules } from "./scoring/ruleScorer";
+import { ConfluenceDetailViewProvider } from "./ui/confluenceDetailViewProvider";
+import { ConfluenceTreeProvider } from "./ui/confluenceTreeProvider";
 import { IssueDetailViewProvider } from "./ui/issueDetailViewProvider";
 import { IssueTreeProvider } from "./ui/issueTreeProvider";
 import { JiraDriverStore } from "./ui/stateStore";
@@ -23,6 +30,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const aiClient = new OpenAICompatibleClient(settingsProvider, context.secrets, output);
   const authProvider = new JiraAuthProvider(context, settingsProvider, output);
   const jiraClient = new JiraClient(authProvider, output);
+  const confluenceClient = new ConfluenceClient(authProvider, output);
+  const confluenceExplorerService = new ConfluenceExplorerService(confluenceClient, settingsProvider);
+  const confluenceMarkdownExportService = new ConfluenceMarkdownExportService();
   const workspaceContextCollector = new WorkspaceContextCollector();
   const discoveryService = new DiscoveryService(
     jiraClient,
@@ -37,8 +47,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   await authProvider.initialize();
   store.setSignedIn(Boolean(await authProvider.getSession()));
 
-  const treeProvider = new IssueTreeProvider(store);
-  const detailProvider = new IssueDetailViewProvider(store, {
+  const issueTreeProvider = new IssueTreeProvider(store);
+  const issueDetailProvider = new IssueDetailViewProvider(store, {
     signIn,
     refreshIssues,
     scoreIssue,
@@ -48,13 +58,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     copyPrompt,
     openPrompt,
   });
+  const confluenceTreeProvider = new ConfluenceTreeProvider(store, confluenceExplorerService);
+  const confluenceDetailProvider = new ConfluenceDetailViewProvider(store, {
+    signIn,
+    refreshConfluence,
+    searchConfluencePages,
+    openSelectedConfluenceInBrowser,
+    exportConfluenceMarkdown,
+  });
 
   context.subscriptions.push(
     vscode.window.createTreeView("jiraDriver.issueExplorer", {
-      treeDataProvider: treeProvider,
+      treeDataProvider: issueTreeProvider,
       showCollapseAll: true,
     }),
-    vscode.window.registerWebviewViewProvider("jiraDriver.issueDetail", detailProvider),
+    vscode.window.createTreeView("jiraDriver.confluenceExplorer", {
+      treeDataProvider: confluenceTreeProvider,
+      showCollapseAll: true,
+    }),
+    vscode.window.registerWebviewViewProvider("jiraDriver.issueDetail", issueDetailProvider),
+    vscode.window.registerWebviewViewProvider("jiraDriver.confluenceDetail", confluenceDetailProvider),
   );
 
   context.subscriptions.push(
@@ -62,7 +85,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("jiraDriver.signOut", signOut),
     vscode.commands.registerCommand("jiraDriver.refreshIssues", refreshIssues),
     vscode.commands.registerCommand("jiraDriver.searchIssues", searchIssues),
+    vscode.commands.registerCommand("jiraDriver.refreshConfluence", refreshConfluence),
+    vscode.commands.registerCommand("jiraDriver.searchConfluencePages", searchConfluencePages),
     vscode.commands.registerCommand("jiraDriver.openIssue", openIssue),
+    vscode.commands.registerCommand("jiraDriver.openConfluencePage", openConfluencePage),
+    vscode.commands.registerCommand("jiraDriver.exportConfluenceMarkdown", exportConfluenceMarkdown),
     vscode.commands.registerCommand("jiraDriver.scoreIssue", scoreIssue),
     vscode.commands.registerCommand("jiraDriver.requestMoreInfo", requestMoreInfo),
     vscode.commands.registerCommand("jiraDriver.prepareAiFix", prepareAiFix),
@@ -73,6 +100,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   if (store.getState().signedIn) {
     void refreshIssues();
+    void refreshConfluence();
   }
 
   async function signIn(): Promise<void> {
@@ -84,6 +112,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         `Connected to ${session.accountDisplayName ?? session.email}.`,
       );
       await refreshIssues();
+      void refreshConfluence();
     });
   }
 
@@ -100,6 +129,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const { groups } = await discoveryService.refreshOverview();
       store.setGroups(groups);
       store.setSignedIn(true);
+    });
+  }
+
+  async function refreshConfluence(): Promise<void> {
+    await runAction("Refreshing Confluence spaces...", async () => {
+      requireSignedIn();
+      const spaces = await confluenceExplorerService.refreshSpaces();
+      store.setConfluenceSpaces(spaces);
     });
   }
 
@@ -121,6 +158,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     });
   }
 
+  async function searchConfluencePages(): Promise<void> {
+    const query = await vscode.window.showInputBox({
+      title: "Search Confluence Pages",
+      prompt: "Enter a keyword or phrase to search across Confluence pages.",
+      ignoreFocusOut: true,
+    });
+
+    if (!query?.trim()) {
+      return;
+    }
+
+    await runAction("Searching Confluence pages...", async () => {
+      requireSignedIn();
+      const pages = await confluenceClient.searchPages(
+        query.trim(),
+        getSettings().confluenceSpaceKeys,
+      );
+      store.setConfluenceSearchResults(query.trim(), pages);
+    });
+  }
+
   async function openIssue(issueKey?: string): Promise<void> {
     const key = issueKey ?? store.getState().selectedIssue?.key;
     if (!key) {
@@ -132,6 +190,60 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       requireSignedIn();
       const issue = await jiraClient.getIssue(key);
       store.setSelectedIssue(issue);
+    });
+  }
+
+  async function openConfluencePage(pageId?: string): Promise<void> {
+    const id = pageId ?? store.getState().selectedConfluencePage?.id;
+    if (!id) {
+      vscode.window.showWarningMessage("Select a Confluence page first.");
+      return;
+    }
+
+    await runAction("Loading Confluence page...", async () => {
+      requireSignedIn();
+      const page = await confluenceClient.getPage(id);
+      store.setSelectedConfluencePage(page);
+    });
+  }
+
+  async function exportConfluenceMarkdown(target?: unknown): Promise<void> {
+    await runAction("Exporting Confluence page as Markdown...", async () => {
+      requireSignedIn();
+      const page = await getOrLoadSelectedConfluencePage(resolveConfluencePageId(target));
+      const defaultUri = buildDefaultConfluenceMarkdownUri(
+        page.spaceKey,
+        confluenceMarkdownExportService.buildSuggestedFileName(page),
+      );
+      const destination = await vscode.window.showSaveDialog({
+        title: "Export Confluence Page as Markdown",
+        defaultUri,
+        filters: {
+          Markdown: ["md"],
+        },
+        saveLabel: "Export Markdown",
+      });
+
+      if (!destination) {
+        return;
+      }
+
+      await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(destination.fsPath)));
+      const markdown = confluenceMarkdownExportService.buildMarkdown(page);
+      await vscode.workspace.fs.writeFile(destination, Buffer.from(markdown, "utf8"));
+
+      const followUp = await vscode.window.showInformationMessage(
+        `Exported ${page.title} to ${destination.fsPath}.`,
+        "Open File",
+        "Reveal in Explorer",
+      );
+
+      if (followUp === "Open File") {
+        const document = await vscode.workspace.openTextDocument(destination);
+        await vscode.window.showTextDocument(document, { preview: false });
+      } else if (followUp === "Reveal in Explorer") {
+        await vscode.commands.executeCommand("revealFileInOS", destination);
+      }
     });
   }
 
@@ -248,6 +360,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await vscode.window.showTextDocument(document, { preview: false });
   }
 
+  async function openSelectedConfluenceInBrowser(): Promise<void> {
+    const url = store.getState().selectedConfluencePage?.url;
+    if (!url) {
+      vscode.window.showWarningMessage("Select a Confluence page first.");
+      return;
+    }
+
+    await vscode.env.openExternal(vscode.Uri.parse(url));
+  }
+
   async function getOrLoadSelectedIssue() {
     const selectedIssue = store.getState().selectedIssue;
     if (selectedIssue) {
@@ -262,6 +384,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const issue = await jiraClient.getIssue(firstIssue.key);
     store.setSelectedIssue(issue);
     return issue;
+  }
+
+  async function getOrLoadSelectedConfluencePage(pageId?: string) {
+    const selectedPage = store.getState().selectedConfluencePage;
+    if (selectedPage && (!pageId || selectedPage.id === pageId)) {
+      return selectedPage;
+    }
+
+    const id = pageId ?? selectedPage?.id ?? store.getState().confluenceSearchResults[0]?.id;
+    if (!id) {
+      throw new Error("No Confluence page is selected.");
+    }
+
+    const page = await confluenceClient.getPage(id);
+    store.setSelectedConfluencePage(page);
+    return page;
   }
 
   function requireSignedIn(): void {
@@ -280,7 +418,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!settings.siteUrl) {
       const siteUrl = await vscode.window.showInputBox({
         title: "Configure Jira Site URL",
-        prompt: "Enter your Jira Cloud site URL.",
+        prompt: "Enter your Atlassian Cloud site URL.",
         placeHolder: "https://your-domain.atlassian.net",
         ignoreFocusOut: true,
       });
@@ -296,7 +434,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!settings.authEmail) {
       const authEmail = await vscode.window.showInputBox({
         title: "Configure Jira Email",
-        prompt: "Enter the email address used with your Jira Cloud API token/API key.",
+        prompt: "Enter the email address used with your Atlassian Cloud API token/API key.",
         ignoreFocusOut: true,
       });
 
@@ -306,6 +444,51 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       await config.update("auth.email", authEmail.trim(), configTarget);
     }
+  }
+
+  function buildDefaultConfluenceMarkdownUri(
+    spaceKey: string | undefined,
+    fileName: string,
+  ): vscode.Uri {
+    const workspaceUri = vscode.workspace.workspaceFolders?.[0]?.uri;
+    if (workspaceUri) {
+      return vscode.Uri.joinPath(
+        workspaceUri,
+        ".jira-driver",
+        "confluence",
+        (spaceKey ?? "pages").toLowerCase(),
+        fileName,
+      );
+    }
+
+    return vscode.Uri.joinPath(vscode.Uri.file(os.homedir()), fileName);
+  }
+
+  function resolveConfluencePageId(target?: unknown): string | undefined {
+    if (typeof target === "string") {
+      return target;
+    }
+
+    if (!target || typeof target !== "object") {
+      return undefined;
+    }
+
+    const candidate = target as {
+      id?: unknown;
+      page?: {
+        id?: unknown;
+      };
+    };
+
+    if (typeof candidate.id === "string") {
+      return candidate.id;
+    }
+
+    if (typeof candidate.page?.id === "string") {
+      return candidate.page.id;
+    }
+
+    return undefined;
   }
 
   async function runAction(title: string, action: () => Promise<void>): Promise<void> {

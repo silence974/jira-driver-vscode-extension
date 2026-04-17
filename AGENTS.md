@@ -156,10 +156,13 @@
 - 已完成本地 F5 调试配置，仓库内已提供 `.vscode/launch.json` 和 `.vscode/tasks.json`。
 - 已补充本地调试引导：F5 会直接打开当前仓库，首次点击 `Sign In` 会引导填写 `jiraDriver.siteUrl`、`jiraDriver.auth.email` 和 Jira API token。
 - 已完成本地打包链路验证，可在 Node 20 下执行 `npm run package` 生成 `.vsix`。
+- 已完成 Confluence 页面浏览与搜索的最小实现，包括 Space 列表、页面关键词搜索、按页面层级展开的目录树浏览，以及 Confluence 页面详情预览。
+- 已完成 Confluence 页面导出为 Markdown 的最小实现，支持从详情页或命令导出本地 `.md` 文件，并尽量保留页面元信息与链接。
 
 ## 当前阻塞与已知缺口
 
 - 尚未补真实 Atlassian OAuth / Jira API 的端到端集成测试，当前以纯逻辑测试和服务层实现为主。
+- 尚未补真实 Confluence Cloud API 的端到端验证，当前 Confluence 页面树和搜索以服务层实现与单元测试为主。
 - 语义匹配和语义评分依赖外部 OpenAI-compatible API；如果未配置 API key，会自动退化为非 LLM 路径。
 - 目前还没有完整的 VS Code UI 自动化测试，只有详情页渲染级 smoke test。
 
@@ -167,8 +170,9 @@
 
 1. 在本机 VS Code 中用真实 `jiraDriver.siteUrl`、`jiraDriver.auth.email` 和 Jira API token 跑一次登录。
 2. 验证 `Issue Explorer` 能拉取到真实 Jira。
-3. 用一个低质量 issue 验证评分和评论草稿回写。
-4. 用一个高质量 issue 验证 `.jira-driver/tasks/` handoff 产物和 prompt 流程。
+3. 用真实 Confluence Space 验证 `Confluence Explorer` 能拉取 Space 和页面目录树，并测试关键词搜索。
+4. 用一个低质量 issue 验证评分和评论草稿回写。
+5. 用一个高质量 issue 验证 `.jira-driver/tasks/` handoff 产物和 prompt 流程。
 
 ## 恢复任务时优先检查
 

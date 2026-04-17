@@ -51,6 +51,43 @@ export interface IssueGroup {
   issues: JiraIssueSummary[];
 }
 
+export interface ConfluenceSpaceSummary {
+  id: string;
+  key: string;
+  name: string;
+  homepageId?: string;
+  url: string;
+}
+
+export interface ConfluencePageSummary {
+  id: string;
+  title: string;
+  spaceId: string;
+  spaceKey?: string;
+  spaceName?: string;
+  status: string;
+  updated: string;
+  url: string;
+  excerpt?: string;
+  parentId?: string;
+  hasChildren?: boolean;
+}
+
+export interface ConfluencePageBreadcrumb {
+  id: string;
+  title: string;
+  url: string;
+}
+
+export interface ConfluencePageDetail extends ConfluencePageSummary {
+  bodyHtml: string;
+  bodyExportHtml?: string;
+  bodyText: string;
+  versionNumber?: number;
+  updatedByDisplayName?: string;
+  ancestors: ConfluencePageBreadcrumb[];
+}
+
 export interface ScoreBreakdownItem {
   id: string;
   label: string;
@@ -125,6 +162,7 @@ export interface JiraDriverSettings {
   authEmail: string;
   defaultProjects: string[];
   savedJqls: string[];
+  confluenceSpaceKeys: string[];
   aiBaseUrl: string;
   aiChatModel: string;
   aiEmbeddingModel?: string;
@@ -136,7 +174,11 @@ export interface JiraDriverSettings {
 export interface AppState {
   signedIn: boolean;
   groups: IssueGroup[];
+  confluenceSpaces: ConfluenceSpaceSummary[];
+  confluenceSearchQuery?: string;
+  confluenceSearchResults: ConfluencePageSummary[];
   selectedIssue?: JiraIssueDetail;
+  selectedConfluencePage?: ConfluencePageDetail;
   selectedIssueScore?: IssueScoringResult;
   commentDraft?: string;
   handoffArtifacts?: HandoffArtifacts;

@@ -1,11 +1,22 @@
 import * as vscode from "vscode";
 
-import { AppState, HandoffArtifacts, IssueGroup, IssueScoringResult, JiraIssueDetail } from "../models";
+import {
+  AppState,
+  ConfluencePageDetail,
+  ConfluencePageSummary,
+  ConfluenceSpaceSummary,
+  HandoffArtifacts,
+  IssueGroup,
+  IssueScoringResult,
+  JiraIssueDetail,
+} from "../models";
 
 export class JiraDriverStore {
   private state: AppState = {
     signedIn: false,
     groups: [],
+    confluenceSpaces: [],
+    confluenceSearchResults: [],
   };
 
   private readonly emitter = new vscode.EventEmitter<AppState>();
@@ -23,6 +34,17 @@ export class JiraDriverStore {
     this.patch({ groups });
   }
 
+  public setConfluenceSpaces(confluenceSpaces: ConfluenceSpaceSummary[]): void {
+    this.patch({ confluenceSpaces });
+  }
+
+  public setConfluenceSearchResults(
+    confluenceSearchQuery: string | undefined,
+    confluenceSearchResults: ConfluencePageSummary[],
+  ): void {
+    this.patch({ confluenceSearchQuery, confluenceSearchResults });
+  }
+
   public setSearchResults(issues: IssueGroup["issues"]): void {
     const groups = this.state.groups.length
       ? this.state.groups.map((group) => (group.id === "search" ? { ...group, issues } : group))
@@ -38,6 +60,10 @@ export class JiraDriverStore {
       commentDraft: this.state.selectedIssue?.key === issue?.key ? this.state.commentDraft : undefined,
       handoffArtifacts: this.state.selectedIssue?.key === issue?.key ? this.state.handoffArtifacts : undefined,
     });
+  }
+
+  public setSelectedConfluencePage(page?: ConfluencePageDetail): void {
+    this.patch({ selectedConfluencePage: page });
   }
 
   public setScoring(score?: IssueScoringResult): void {
@@ -64,6 +90,8 @@ export class JiraDriverStore {
     this.state = {
       signedIn: false,
       groups: [],
+      confluenceSpaces: [],
+      confluenceSearchResults: [],
     };
     this.emitter.fire(this.state);
   }

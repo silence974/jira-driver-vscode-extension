@@ -19,10 +19,15 @@
     "onStartupFinished",
     "onView:jiraDriver.issueExplorer",
     "onView:jiraDriver.issueDetail",
+    "onView:jiraDriver.confluenceExplorer",
+    "onView:jiraDriver.confluenceDetail",
     "onCommand:jiraDriver.signIn",
     "onCommand:jiraDriver.signOut",
     "onCommand:jiraDriver.refreshIssues",
     "onCommand:jiraDriver.searchIssues",
+    "onCommand:jiraDriver.refreshConfluence",
+    "onCommand:jiraDriver.searchConfluencePages",
+    "onCommand:jiraDriver.exportConfluenceMarkdown",
     "onCommand:jiraDriver.scoreIssue",
     "onCommand:jiraDriver.requestMoreInfo",
     "onCommand:jiraDriver.prepareAiFix",
@@ -46,6 +51,18 @@
       {
         "command": "jiraDriver.searchIssues",
         "title": "Jira Driver: Search Issues"
+      },
+      {
+        "command": "jiraDriver.refreshConfluence",
+        "title": "Jira Driver: Refresh Confluence Spaces"
+      },
+      {
+        "command": "jiraDriver.searchConfluencePages",
+        "title": "Jira Driver: Search Confluence Pages"
+      },
+      {
+        "command": "jiraDriver.exportConfluenceMarkdown",
+        "title": "Jira Driver: Export Confluence Page as Markdown"
       },
       {
         "command": "jiraDriver.scoreIssue",
@@ -84,6 +101,16 @@
           "type": "webview",
           "id": "jiraDriver.issueDetail",
           "name": "Issue Detail"
+        },
+        {
+          "type": "tree",
+          "id": "jiraDriver.confluenceExplorer",
+          "name": "Confluence Explorer"
+        },
+        {
+          "type": "webview",
+          "id": "jiraDriver.confluenceDetail",
+          "name": "Confluence Detail"
         }
       ]
     },
@@ -105,9 +132,36 @@
           "group": "navigation@2"
         },
         {
+          "command": "jiraDriver.signIn",
+          "when": "view == jiraDriver.confluenceExplorer && !jiraDriver.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "jiraDriver.refreshConfluence",
+          "when": "view == jiraDriver.confluenceExplorer && jiraDriver.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "jiraDriver.searchConfluencePages",
+          "when": "view == jiraDriver.confluenceExplorer && jiraDriver.signedIn",
+          "group": "navigation@2"
+        },
+        {
+          "command": "jiraDriver.exportConfluenceMarkdown",
+          "when": "view == jiraDriver.confluenceDetail && jiraDriver.signedIn",
+          "group": "navigation@3"
+        },
+        {
           "command": "jiraDriver.setAiApiKey",
           "when": "view == jiraDriver.issueDetail",
           "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "jiraDriver.exportConfluenceMarkdown",
+          "when": "view == jiraDriver.confluenceExplorer && viewItem == jiraDriver.confluencePage && jiraDriver.signedIn",
+          "group": "inline@1"
         }
       ]
     },
@@ -139,6 +193,14 @@
           },
           "default": [],
           "markdownDescription": "Optional saved JQL filters that will be merged into Project Results."
+        },
+        "jiraDriver.confluence.spaceKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Optional Confluence space keys used to scope page browsing and search. Leave empty to browse all visible spaces."
         },
         "jiraDriver.ai.baseUrl": {
           "type": "string",
@@ -192,5 +254,8 @@
     "@vscode/vsce": "^2.24.0",
     "mocha": "^11.7.4",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "node-html-markdown": "^2.0.0"
   }
 }

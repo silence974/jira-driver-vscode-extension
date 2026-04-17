@@ -8,6 +8,8 @@ describe("renderIssueDetailHtml", () => {
       {
         signedIn: true,
         groups: [],
+        confluenceSpaces: [],
+        confluenceSearchResults: [],
         selectedIssue: {
           id: "1",
           key: "APP-123",

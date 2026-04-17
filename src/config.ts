@@ -15,6 +15,7 @@ export function getSettings(): JiraDriverSettings {
     authEmail: config.get<string>("auth.email", "").trim(),
     defaultProjects: normalizeArray(config.get<string[]>("discovery.defaultProjects", [])),
     savedJqls: normalizeArray(config.get<string[]>("discovery.savedJqls", [])),
+    confluenceSpaceKeys: normalizeArray(config.get<string[]>("confluence.spaceKeys", [])),
     aiBaseUrl: normalizeBaseUrl(config.get<string>("ai.baseUrl", "https://api.deepseek.com")),
     aiChatModel: config.get<string>("ai.chatModel", "deepseek-chat").trim(),
     aiEmbeddingModel: config.get<string>("ai.embeddingModel", "").trim() || undefined,
