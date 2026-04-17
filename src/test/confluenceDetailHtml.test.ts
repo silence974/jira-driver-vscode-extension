@@ -36,8 +36,10 @@ describe("renderConfluenceDetailHtml", () => {
     );
 
     assert.match(html, /Release checklist/);
-    assert.match(html, /Export Markdown/);
-    assert.match(html, /Open in Browser/);
+    assert.match(html, /aria-label="Export Markdown"/);
+    assert.match(html, /aria-label="Open in Browser"/);
+    assert.match(html, /data-action="exportConfluenceMarkdown"/);
+    assert.match(html, /data-action="openSelectedConfluenceInBrowser"/);
     assert.doesNotMatch(html, /Search Pages/);
     assert.doesNotMatch(html, /Refresh Spaces/);
   });

@@ -59,6 +59,10 @@ export function renderConfluenceDetailHtml(state: AppState, nonce: string): stri
         flex-wrap: wrap;
         gap: 8px;
       }
+      .actions.compact {
+        margin-top: 10px;
+        gap: 6px;
+      }
       button {
         border: 0;
         border-radius: 999px;
@@ -67,10 +71,43 @@ export function renderConfluenceDetailHtml(state: AppState, nonce: string): stri
         color: white;
         background: linear-gradient(135deg, #059669, #2563eb);
       }
+      button.compact {
+        padding: 5px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.2;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+      }
+      button.icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+      }
       button.secondary {
         background: color-mix(in srgb, var(--bg) 82%, white 18%);
         color: var(--fg);
         border: 1px solid var(--border);
+      }
+      button:hover {
+        filter: brightness(1.04);
+      }
+      button:focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--accent) 72%, white 28%);
+        outline-offset: 2px;
+      }
+      .icon-svg {
+        width: 14px;
+        height: 14px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
       .breadcrumbs {
         display: flex;
@@ -119,12 +156,19 @@ export function renderConfluenceDetailHtml(state: AppState, nonce: string): stri
             ${page.updated ? `<span class="pill">${escapeHtml(page.updated)}</span>` : ""}
             ${page.updatedByDisplayName ? `<span class="pill">${escapeHtml(page.updatedByDisplayName)}</span>` : ""}
           </div>
-        </section>
-
-        <section class="card stack">
-          <div class="actions">
-            <button data-action="exportConfluenceMarkdown">Export Markdown</button>
-            <button data-action="openSelectedConfluenceInBrowser" class="secondary">Open in Browser</button>
+          <div class="actions compact">
+            <button
+              data-action="exportConfluenceMarkdown"
+              class="icon"
+              title="Export Markdown"
+              aria-label="Export Markdown"
+            >${renderExportIcon()}</button>
+            <button
+              data-action="openSelectedConfluenceInBrowser"
+              class="secondary icon"
+              title="Open in Browser"
+              aria-label="Open in Browser"
+            >${renderOpenInBrowserIcon()}</button>
           </div>
         </section>
 
@@ -166,5 +210,25 @@ function renderEmptyState(state: AppState): string {
       <h1>Select a Confluence page</h1>
       <p class="muted">Use the Confluence Explorer toolbar to refresh ${escapeHtml(scope)} or search for a page, then open one result here for preview and export.</p>
     </section>
+  `;
+}
+
+function renderExportIcon(): string {
+  return `
+    <svg class="icon-svg" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 2.5v6"></path>
+      <path d="M5.5 6.5 8 9l2.5-2.5"></path>
+      <path d="M3 10.5v1A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-1"></path>
+    </svg>
+  `;
+}
+
+function renderOpenInBrowserIcon(): string {
+  return `
+    <svg class="icon-svg" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M6 3.5H4.5A1.5 1.5 0 0 0 3 5v6A1.5 1.5 0 0 0 4.5 12.5h6A1.5 1.5 0 0 0 12 11V9.5"></path>
+      <path d="M8 3.5h4.5V8"></path>
+      <path d="M12.5 3.5 7 9"></path>
+    </svg>
   `;
 }
