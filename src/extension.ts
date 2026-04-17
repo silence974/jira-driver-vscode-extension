@@ -1,4 +1,3 @@
-import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
 
@@ -6,6 +5,7 @@ import { HandoffService } from "./ai/handoffService";
 import { OpenAICompatibleClient } from "./ai/openAiCompatibleClient";
 import { JiraAuthProvider } from "./auth/jiraAuthProvider";
 import { ConfluenceClient } from "./confluence/confluenceClient";
+import { ConfluenceExportService } from "./confluence/confluenceExportService";
 import { ConfluenceExplorerService } from "./confluence/confluenceExplorerService";
 import { ConfluenceMarkdownExportService } from "./confluence/confluenceMarkdownExportService";
 import { getSettings } from "./config";
@@ -45,6 +45,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const confluenceClient = new ConfluenceClient(authProvider, output);
   const confluenceExplorerService = new ConfluenceExplorerService(confluenceClient, settingsProvider);
   const confluenceMarkdownExportService = new ConfluenceMarkdownExportService();
+  const confluenceExportService = new ConfluenceExportService(
+    authProvider,
+    confluenceMarkdownExportService,
+    output,
+  );
   const workspaceContextCollector = new WorkspaceContextCollector();
   const discoveryService = new DiscoveryService(
     jiraClient,
@@ -54,7 +59,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     output,
   );
   const llmScorer = new LlmScorer(aiClient);
-  const handoffService = new HandoffService();
+  const handoffService = new HandoffService(authProvider, output);
 
   await authProvider.initialize();
   store.setSignedIn(await authProvider.hasStoredCredentials());
@@ -278,26 +283,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await runAction("Exporting Confluence page as Markdown...", async () => {
       requireSignedIn();
       const page = await getOrLoadSelectedConfluencePage(resolveConfluencePageId(target));
-      const defaultUri = buildDefaultConfluenceMarkdownUri(
-        page.spaceKey,
-        confluenceMarkdownExportService.buildSuggestedFileName(page),
-      );
-      const destination = await vscode.window.showSaveDialog({
-        title: "Export Confluence Page as Markdown",
-        defaultUri,
-        filters: {
-          Markdown: ["md"],
-        },
-        saveLabel: "Export Markdown",
-      });
-
-      if (!destination) {
-        return;
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+        throw new Error("Confluence export requires an open workspace folder.");
       }
 
-      await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(destination.fsPath)));
-      const markdown = confluenceMarkdownExportService.buildMarkdown(page);
-      await vscode.workspace.fs.writeFile(destination, Buffer.from(markdown, "utf8"));
+      const downloadAttachments = page.attachments.length
+        ? (await vscode.window.showInformationMessage(
+          `Download all ${page.attachments.length} Confluence attachments for "${page.title}" as well?`,
+          {
+            modal: true,
+          },
+          "Download Attachments",
+          "Skip Attachments",
+        )) === "Download Attachments"
+        : false;
+
+      const result = await confluenceExportService.exportPage(page, workspaceRoot, {
+        downloadAttachments,
+      });
+      const destination = vscode.Uri.file(result.markdownPath);
 
       void vscode.window.showInformationMessage(
         `Exported ${page.title} to ${destination.fsPath}.`,
@@ -586,24 +591,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       await config.update("auth.email", authEmail.trim(), configTarget);
     }
-  }
-
-  function buildDefaultConfluenceMarkdownUri(
-    spaceKey: string | undefined,
-    fileName: string,
-  ): vscode.Uri {
-    const workspaceUri = vscode.workspace.workspaceFolders?.[0]?.uri;
-    if (workspaceUri) {
-      return vscode.Uri.joinPath(
-        workspaceUri,
-        ".jira-driver",
-        "confluence",
-        (spaceKey ?? "pages").toLowerCase(),
-        fileName,
-      );
-    }
-
-    return vscode.Uri.joinPath(vscode.Uri.file(os.homedir()), fileName);
   }
 
   function resolveConfluencePageId(target?: unknown): string | undefined {

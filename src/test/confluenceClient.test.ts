@@ -262,7 +262,34 @@ describe("ConfluenceClient", () => {
     const originalFetch = globalThis.fetch;
 
     globalThis.fetch = (async (input: string | URL | Request) => {
-      calls.push(String(input));
+      const url = String(input);
+      calls.push(url);
+
+      if (url.includes("/pages/123/attachments")) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "att-1",
+                title: "diagram.png",
+                mediaType: "image/png",
+                fileSize: 2048,
+                downloadLink: "/wiki/download/attachments/123/diagram.png",
+              },
+            ],
+            _links: {
+              base: "https://example.atlassian.net",
+            },
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        );
+      }
+
       return new Response(
         JSON.stringify({
           id: "123",
@@ -321,12 +348,15 @@ describe("ConfluenceClient", () => {
 
       const page = await client.getPage("123");
 
-      assert.equal(calls.length, 1);
+      assert.equal(calls.length, 2);
       assert.match(decodeURIComponent(calls[0]), /body\.export_view/);
+      assert.match(calls[1], /\/wiki\/api\/v2\/pages\/123\/attachments\?/);
       assert.equal(page.url, "https://example.atlassian.net/wiki/spaces/ENG/pages/123/Release+checklist");
       assert.equal(page.bodyExportHtml, "<p>Export body</p>");
       assert.equal(page.bodyHtml, "<p>Preview body</p>");
       assert.equal(page.bodyText, "Export body");
+      assert.equal(page.attachments.length, 1);
+      assert.equal(page.attachments[0].downloadUrl, "https://example.atlassian.net/wiki/download/attachments/123/diagram.png");
     } finally {
       globalThis.fetch = originalFetch;
     }

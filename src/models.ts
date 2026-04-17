@@ -101,6 +101,15 @@ export interface ConfluencePageSummary {
   hasChildren?: boolean;
 }
 
+export interface ConfluenceAttachmentSummary {
+  id: string;
+  title: string;
+  mediaType?: string;
+  fileSize?: number;
+  downloadUrl: string;
+  webUrl?: string;
+}
+
 export interface ConfluencePageBreadcrumb {
   id: string;
   title: string;
@@ -114,6 +123,7 @@ export interface ConfluencePageDetail extends ConfluencePageSummary {
   versionNumber?: number;
   updatedByDisplayName?: string;
   ancestors: ConfluencePageBreadcrumb[];
+  attachments: ConfluenceAttachmentSummary[];
 }
 
 export interface ScoreBreakdownItem {

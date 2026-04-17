@@ -29,6 +29,7 @@ describe("ConfluenceMarkdownExportService", () => {
           url: "https://example.atlassian.net/wiki/spaces/ENG/overview",
         },
       ],
+      attachments: [],
     });
 
     assert.match(markdown, /^# Release checklist/m);
@@ -52,6 +53,7 @@ describe("ConfluenceMarkdownExportService", () => {
       bodyHtml: "<p>Body</p>",
       bodyText: "Body",
       ancestors: [],
+      attachments: [],
     });
 
     assert.equal(fileName, "eng-123.md");

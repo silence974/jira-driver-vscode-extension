@@ -35,6 +35,7 @@ describe("renderConfluenceDetailHtml", () => {
               url: "https://example.atlassian.net/wiki/spaces/ENG/overview",
             },
           ],
+          attachments: [],
         },
       },
       "nonce123",

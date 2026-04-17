@@ -162,6 +162,10 @@
 - 已补 Confluence Space 全量分页拉取，并基于 Confluence Space `type` 区分项目/共享 Space 与个人 Space，列表和选择器都会优先展示项目/共享 Space。
 - 已完成 Confluence 页面浏览与搜索的最小实现，包括 Space 列表、页面关键词搜索、按页面层级展开的目录树浏览，以及 Confluence 页面详情预览。
 - 已补 Confluence 混合内容树支持：页面树展开时改用 direct-children 接口，能够显示 `folder` 节点（如 `Tools`）并对多类型子节点分页拉取。
+- 已将 Confluence Markdown 导出改为工作区内固定落盘：按 `Space / 页面目录树 / 页面名.md` 自动保存到 `.jira-driver/confluence/`，目录与文件名中的空格会替换为下划线。
+- 已补导出资源本地化：Confluence 导出会自动下载正文中的图片并重写 Markdown 图片链接；若页面存在附件，会先询问是否一并下载全部附件。
+- 已补 Jira handoff 图片附件落地：生成 `.jira-driver/tasks/<ISSUE_KEY>/README.md` 时会自动下载图片附件到任务目录，并在 README 中使用本地 Markdown 图片链接展示。
+- 已补 Jira handoff markdown 化：README 中的问题描述和评论会优先从 HTML 转成 Markdown，并自动下载其中的远程图片到任务目录后重写为本地相对链接。
 - 已完成 Confluence 页面导出为 Markdown 的最小实现，支持从详情页或命令导出本地 `.md` 文件，并尽量保留页面元信息与链接。
 - 已精简主要 UI 操作入口：列表视图保留发现类操作，详情视图保留当前对象操作，移除了重复按钮入口。
 

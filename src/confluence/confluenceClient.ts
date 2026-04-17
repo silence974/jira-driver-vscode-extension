@@ -1,4 +1,5 @@
 import {
+  ConfluenceAttachmentSummary,
   ConfluencePageBreadcrumb,
   ConfluencePageDetail,
   ConfluencePageSummary,
@@ -11,6 +12,7 @@ interface ConfluenceApiLinks {
   base?: string;
   context?: string;
   next?: string;
+  download?: string;
   webui?: string;
 }
 
@@ -45,6 +47,16 @@ interface ConfluenceV2PageApiModel {
     createdAt?: string;
     authorId?: string;
   };
+  _links?: ConfluenceApiLinks;
+}
+
+interface ConfluenceV2AttachmentApiModel {
+  id: string;
+  title?: string;
+  mediaType?: string;
+  fileSize?: number;
+  downloadLink?: string;
+  webuiLink?: string;
   _links?: ConfluenceApiLinks;
 }
 
@@ -181,11 +193,17 @@ export class ConfluenceClient {
       expand: "body.export_view,body.view,body.storage,space,version,ancestors",
     });
 
-    const response = await this.requestV1<ConfluenceContentApiModel>(
-      `/content/${encodeURIComponent(pageId)}?${params.toString()}`,
-    );
+    const [response, attachments] = await Promise.all([
+      this.requestV1<ConfluenceContentApiModel>(
+        `/content/${encodeURIComponent(pageId)}?${params.toString()}`,
+      ),
+      this.listPageAttachments(pageId).catch((error) => {
+        this.logger?.appendLine(`Confluence attachment list failed for ${pageId}: ${String(error)}`);
+        return [] as ConfluenceAttachmentSummary[];
+      }),
+    ]);
 
-    return mapContentDetail(response, response._links?.base ?? siteUrl);
+    return mapContentDetail(response, response._links?.base ?? siteUrl, attachments);
   }
 
   public async searchPages(
@@ -261,6 +279,14 @@ export class ConfluenceClient {
     }
 
     return { baseUrl, results };
+  }
+
+  private async listPageAttachments(pageId: string): Promise<ConfluenceAttachmentSummary[]> {
+    const { baseUrl, results } = await this.collectPaginatedV2Results<ConfluenceV2AttachmentApiModel>(
+      `/pages/${encodeURIComponent(pageId)}/attachments?limit=${DEFAULT_PAGE_LIMIT}`,
+    );
+
+    return results.map((attachment) => mapAttachmentSummary(attachment, baseUrl, pageId));
   }
 }
 
@@ -361,7 +387,11 @@ function mapContentSummary(page: ConfluenceContentApiModel, baseUrl: string): Co
   };
 }
 
-function mapContentDetail(page: ConfluenceContentApiModel, baseUrl: string): ConfluencePageDetail {
+function mapContentDetail(
+  page: ConfluenceContentApiModel,
+  baseUrl: string,
+  attachments: ConfluenceAttachmentSummary[],
+): ConfluencePageDetail {
   const summary = mapContentSummary(page, baseUrl);
   const bodyExportHtml = page.body?.export_view?.value?.trim();
   const bodyHtml = page.body?.view?.value?.trim()
@@ -380,6 +410,7 @@ function mapContentDetail(page: ConfluenceContentApiModel, baseUrl: string): Con
       page._links?.base ?? baseUrl,
       page.space?.key,
     )),
+    attachments,
   };
 }
 
@@ -436,12 +467,34 @@ function buildDirectChildrenPath(
 
 function resolveConfluenceUrl(baseUrl: string, webUiPath: string | undefined, fallbackPath: string): string {
   const normalizedBaseUrl = normalizeSiteUrl(baseUrl);
+  const candidatePath = normalizeConfluenceResourcePath(webUiPath || fallbackPath);
 
   try {
-    return new URL(webUiPath || fallbackPath, `${normalizedBaseUrl}/`).toString();
+    return new URL(candidatePath, `${normalizedBaseUrl}/`).toString();
   } catch {
-    return `${normalizedBaseUrl}${fallbackPath}`;
+    return `${normalizedBaseUrl}${normalizeConfluenceResourcePath(fallbackPath)}`;
   }
+}
+
+function mapAttachmentSummary(
+  attachment: ConfluenceV2AttachmentApiModel,
+  baseUrl: string,
+  pageId: string,
+): ConfluenceAttachmentSummary {
+  return {
+    id: String(attachment.id ?? ""),
+    title: attachment.title ?? `attachment-${attachment.id}`,
+    mediaType: attachment.mediaType,
+    fileSize: attachment.fileSize,
+    downloadUrl: resolveConfluenceUrl(
+      baseUrl,
+      attachment.downloadLink ?? attachment._links?.download,
+      `/wiki/rest/api/content/${encodeURIComponent(pageId)}/child/attachment/${encodeURIComponent(String(attachment.id ?? ""))}/download`,
+    ),
+    webUrl: attachment.webuiLink
+      ? resolveConfluenceUrl(baseUrl, attachment.webuiLink, "/")
+      : undefined,
+  };
 }
 
 function buildCanonicalConfluencePagePath(
@@ -471,6 +524,31 @@ function encodeConfluencePageTitle(title: string | undefined): string {
   }
 
   return encodeURIComponent(normalizedTitle).replace(/%20/g, "+");
+}
+
+function normalizeConfluenceResourcePath(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed || /^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  if (withLeadingSlash.startsWith("/wiki/")) {
+    return withLeadingSlash;
+  }
+
+  if (
+    withLeadingSlash.startsWith("/download/attachments")
+    || withLeadingSlash.startsWith("/rest/api/")
+    || withLeadingSlash.startsWith("/spaces/")
+    || withLeadingSlash.startsWith("/pages/")
+    || withLeadingSlash.startsWith("/display/")
+    || withLeadingSlash.startsWith("/x/")
+  ) {
+    return `/wiki${withLeadingSlash}`;
+  }
+
+  return withLeadingSlash;
 }
 
 function buildSearchCql(query: string, spaceKeys: string[]): string {

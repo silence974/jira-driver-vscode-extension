@@ -73,11 +73,26 @@ describe("handoff templates", () => {
   };
 
   it("renders a full README and prompt", () => {
-    const readme = buildHandoffReadme(issue, scoring, workspaceContext, "jira/app-123-fix-auth");
+    const readme = buildHandoffReadme(
+      issue,
+      scoring,
+      workspaceContext,
+      "jira/app-123-fix-auth",
+      [
+        {
+          attachmentId: "a1",
+          filename: "jira-auth.png",
+          relativePath: "assets/jira-auth.png",
+          isImage: true,
+        },
+      ],
+    );
     const prompt = buildHandoffPrompt(issue, ".jira-driver/tasks/APP-123/README.md", "jira/app-123-fix-auth");
 
     assert.match(readme, /## Acceptance Criteria/);
     assert.match(readme, /jira\/app-123-fix-auth/);
+    assert.match(readme, /\[jira-auth\.png\]\(assets\/jira-auth\.png\)/);
+    assert.match(readme, /!\[jira-auth\.png\]\(assets\/jira-auth\.png\)/);
     assert.match(prompt, /Read `\.jira-driver\/tasks\/APP-123\/README.md` completely\./);
   });
 
