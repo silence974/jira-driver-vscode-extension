@@ -236,6 +236,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         title: "Select Confluence Spaces",
         ignoreFocusOut: true,
         canPickMany: true,
+        matchOnDescription: true,
       },
     );
 
