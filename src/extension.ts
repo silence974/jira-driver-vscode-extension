@@ -232,18 +232,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const markdown = confluenceMarkdownExportService.buildMarkdown(page);
       await vscode.workspace.fs.writeFile(destination, Buffer.from(markdown, "utf8"));
 
-      const followUp = await vscode.window.showInformationMessage(
+      void vscode.window.showInformationMessage(
         `Exported ${page.title} to ${destination.fsPath}.`,
         "Open File",
         "Reveal in Explorer",
-      );
-
-      if (followUp === "Open File") {
-        const document = await vscode.workspace.openTextDocument(destination);
-        await vscode.window.showTextDocument(document, { preview: false });
-      } else if (followUp === "Reveal in Explorer") {
-        await vscode.commands.executeCommand("revealFileInOS", destination);
-      }
+      ).then(async (followUp) => {
+        if (followUp === "Open File") {
+          const document = await vscode.workspace.openTextDocument(destination);
+          await vscode.window.showTextDocument(document, { preview: false });
+        } else if (followUp === "Reveal in Explorer") {
+          await vscode.commands.executeCommand("revealFileInOS", destination);
+        }
+      });
     });
   }
 
