@@ -4,6 +4,7 @@ import {
   JiraComment,
   JiraIssueDetail,
   JiraIssueSummary,
+  JiraProjectSummary,
 } from "../models";
 import { adfToHtml, adfToText } from "../utils/adf";
 import { normalizeSiteUrl } from "../utils/strings";
@@ -26,6 +27,16 @@ interface JiraIssueApiModel {
   id: string;
   key: string;
   fields: Record<string, any>;
+}
+
+interface JiraProjectSearchResponse {
+  values?: JiraProjectApiModel[];
+}
+
+interface JiraProjectApiModel {
+  id?: string;
+  key?: string;
+  name?: string;
 }
 
 export class JiraClient {
@@ -55,6 +66,18 @@ export class JiraClient {
     });
 
     return (response.issues ?? []).map((issue) => mapIssueSummary(issue, siteUrl));
+  }
+
+  public async listProjects(maxResults = 100): Promise<JiraProjectSummary[]> {
+    const query = new URLSearchParams({
+      maxResults: String(maxResults),
+      orderBy: "key",
+    });
+    const response = await this.request<JiraProjectSearchResponse>(`/project/search?${query.toString()}`);
+
+    return (response.values ?? [])
+      .map(mapProjectSummary)
+      .filter((project): project is JiraProjectSummary => Boolean(project));
   }
 
   public async getIssue(issueKey: string): Promise<JiraIssueDetail> {
@@ -135,10 +158,24 @@ function mapIssueSummary(
     status: fields.status?.name ?? "Unknown",
     projectKey: fields.project?.key ?? "UNKNOWN",
     issueType: fields.issuetype?.name,
+    assigneeAccountId: fields.assignee?.accountId,
     assigneeDisplayName: fields.assignee?.displayName,
     updated: fields.updated ?? "",
     descriptionText,
     url: buildIssueUrl(siteUrl, issue.key),
+  };
+}
+
+function mapProjectSummary(project: JiraProjectApiModel): JiraProjectSummary | undefined {
+  const key = project.key?.trim();
+  if (!key) {
+    return undefined;
+  }
+
+  return {
+    id: String(project.id ?? key),
+    key,
+    name: project.name?.trim() || key,
   };
 }
 

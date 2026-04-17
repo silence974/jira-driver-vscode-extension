@@ -46,21 +46,39 @@
       },
       {
         "command": "jiraDriver.refreshIssues",
-        "title": "Jira Driver: Refresh Issues"
+        "title": "Jira Driver: Refresh Issues",
+        "shortTitle": "Refresh",
+        "icon": {
+          "light": "media/light/refresh.svg",
+          "dark": "media/dark/refresh.svg"
+        }
       },
       {
         "command": "jiraDriver.searchIssues",
-        "title": "Jira Driver: Search Issues"
+        "title": "Jira Driver: Search Issues",
+        "shortTitle": "Search",
+        "icon": {
+          "light": "media/light/search.svg",
+          "dark": "media/dark/search.svg"
+        }
       },
       {
         "command": "jiraDriver.refreshConfluence",
         "title": "Jira Driver: Refresh Confluence Spaces",
-        "shortTitle": "Refresh"
+        "shortTitle": "Refresh",
+        "icon": {
+          "light": "media/light/refresh.svg",
+          "dark": "media/dark/refresh.svg"
+        }
       },
       {
         "command": "jiraDriver.searchConfluencePages",
         "title": "Jira Driver: Search Confluence Pages",
-        "shortTitle": "Search"
+        "shortTitle": "Search",
+        "icon": {
+          "light": "media/light/search.svg",
+          "dark": "media/dark/search.svg"
+        }
       },
       {
         "command": "jiraDriver.exportConfluenceMarkdown",
@@ -80,7 +98,12 @@
       },
       {
         "command": "jiraDriver.setAiApiKey",
-        "title": "Jira Driver: Set AI API Key"
+        "title": "Jira Driver: Set AI API Key",
+        "shortTitle": "API Key",
+        "icon": {
+          "light": "media/light/settings-gear.svg",
+          "dark": "media/dark/settings-gear.svg"
+        }
       }
     ],
     "viewsContainers": {

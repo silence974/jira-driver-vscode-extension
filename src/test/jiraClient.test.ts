@@ -47,4 +47,51 @@ describe("JiraClient", () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it("loads visible Jira projects from the project search endpoint", async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const originalFetch = globalThis.fetch;
+
+    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+      calls.push({ url: String(input), init });
+      return new Response(
+        JSON.stringify({
+          values: [
+            { id: "10000", key: "APP", name: "App Platform" },
+          ],
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }) as typeof fetch;
+
+    try {
+      const client = new JiraClient({
+        async getSession() {
+          return {
+            siteUrl: "https://example.atlassian.net",
+            email: "dev@example.com",
+          };
+        },
+        async getAuthorizationHeader() {
+          return "Basic ZGV2QGV4YW1wbGUuY29tOnRva2Vu";
+        },
+        async getSiteUrl() {
+          return "https://example.atlassian.net";
+        },
+      });
+
+      const projects = await client.listProjects();
+
+      assert.equal(projects.length, 1);
+      assert.equal(projects[0].key, "APP");
+      assert.match(calls[0].url, /\/rest\/api\/3\/project\/search\?/);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

@@ -24,6 +24,7 @@ export interface JiraIssueSummary {
   status: string;
   projectKey: string;
   issueType?: string;
+  assigneeAccountId?: string;
   assigneeDisplayName?: string;
   updated: string;
   descriptionText?: string;
@@ -49,6 +50,30 @@ export interface IssueGroup {
   id: IssueGroupId;
   label: string;
   issues: JiraIssueSummary[];
+}
+
+export interface JiraProjectSummary {
+  id: string;
+  key: string;
+  name: string;
+}
+
+export interface JiraProjectAssigneeOption {
+  accountId: string;
+  displayName: string;
+}
+
+export interface JiraProjectFilterSelection {
+  issueType?: string;
+  status?: string;
+  assigneeAccountId?: string;
+  query?: string;
+}
+
+export interface JiraProjectExplorerState {
+  project: JiraProjectSummary;
+  isLoaded: boolean;
+  browseIssues: JiraIssueSummary[];
 }
 
 export interface ConfluenceSpaceSummary {
@@ -174,6 +199,10 @@ export interface JiraDriverSettings {
 export interface AppState {
   signedIn: boolean;
   groups: IssueGroup[];
+  jiraProjects: JiraProjectExplorerState[];
+  selectedProjectKeys: string[];
+  issueExplorerFilters: JiraProjectFilterSelection;
+  issueSearchResults?: JiraIssueSummary[];
   confluenceSpaces: ConfluenceSpaceSummary[];
   confluenceSearchQuery?: string;
   confluenceSearchResults: ConfluencePageSummary[];

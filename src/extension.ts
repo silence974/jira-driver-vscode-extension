@@ -10,14 +10,26 @@ import { ConfluenceExplorerService } from "./confluence/confluenceExplorerServic
 import { ConfluenceMarkdownExportService } from "./confluence/confluenceMarkdownExportService";
 import { getSettings } from "./config";
 import { DiscoveryService } from "./discovery/discoveryService";
+import {
+  buildVisibleIssueList,
+  collectSelectedProjectBrowseIssues,
+  getSelectedProjectFilterOptions,
+  sanitizeProjectFilters,
+  UNASSIGNED_ASSIGNEE_ACCOUNT_ID,
+} from "./discovery/projectIssueFilters";
 import { JiraClient } from "./jira/jiraClient";
+import { AppState } from "./models";
 import { buildMoreInfoComment } from "./scoring/commentDraft";
 import { LlmScorer, mergeScoringResults } from "./scoring/llmScorer";
 import { scoreIssueByRules } from "./scoring/ruleScorer";
 import { ConfluenceDetailViewProvider } from "./ui/confluenceDetailViewProvider";
 import { ConfluenceTreeProvider } from "./ui/confluenceTreeProvider";
 import { IssueDetailViewProvider } from "./ui/issueDetailViewProvider";
-import { IssueTreeProvider } from "./ui/issueTreeProvider";
+import {
+  formatProjectSelectionSummary,
+  IssueFilterKind,
+  IssueTreeProvider,
+} from "./ui/issueTreeProvider";
 import { JiraDriverStore } from "./ui/stateStore";
 import { WorkspaceContextCollector } from "./workspace/contextCollector";
 
@@ -60,15 +72,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     exportConfluenceMarkdown,
   });
 
+  const issueTreeView = vscode.window.createTreeView("jiraDriver.issueExplorer", {
+    treeDataProvider: issueTreeProvider,
+    showCollapseAll: true,
+  });
+  const confluenceTreeView = vscode.window.createTreeView("jiraDriver.confluenceExplorer", {
+    treeDataProvider: confluenceTreeProvider,
+    showCollapseAll: true,
+  });
+
   context.subscriptions.push(
-    vscode.window.createTreeView("jiraDriver.issueExplorer", {
-      treeDataProvider: issueTreeProvider,
-      showCollapseAll: true,
-    }),
-    vscode.window.createTreeView("jiraDriver.confluenceExplorer", {
-      treeDataProvider: confluenceTreeProvider,
-      showCollapseAll: true,
-    }),
+    issueTreeView,
+    confluenceTreeView,
     vscode.window.registerWebviewViewProvider("jiraDriver.issueDetail", issueDetailProvider),
     vscode.window.registerWebviewViewProvider("jiraDriver.confluenceDetail", confluenceDetailProvider),
   );
@@ -87,6 +102,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("jiraDriver.requestMoreInfo", requestMoreInfo),
     vscode.commands.registerCommand("jiraDriver.prepareAiFix", prepareAiFix),
     vscode.commands.registerCommand("jiraDriver.setAiApiKey", setAiApiKey),
+    vscode.commands.registerCommand("jiraDriver.pickIssueExplorerFilter", pickIssueExplorerFilter),
     vscode.commands.registerCommand("jiraDriver.copyPrompt", copyPrompt),
     vscode.commands.registerCommand("jiraDriver.openPrompt", openPrompt),
   );
@@ -119,8 +135,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   async function refreshIssues(): Promise<void> {
     await runAction("Refreshing Jira issues...", async () => {
       requireSignedIn();
-      const { groups } = await discoveryService.refreshOverview();
-      store.setGroups(groups);
+      const { projects } = await discoveryService.refreshOverview();
+      store.setIssueExplorerData(projects);
       store.setSignedIn(true);
     });
   }
@@ -134,20 +150,35 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function searchIssues(): Promise<void> {
-    const query = await vscode.window.showInputBox({
-      title: "Search Jira Issues",
-      prompt: "Enter a keyword query for Jira issue search and reranking.",
-      ignoreFocusOut: true,
-    });
-
-    if (!query?.trim()) {
+    const projectKeys = store.getState().selectedProjectKeys;
+    if (!projectKeys.length) {
+      vscode.window.showWarningMessage("Select one or more Jira projects first.");
       return;
     }
 
-    await runAction("Searching Jira issues...", async () => {
+    await ensureSelectedProjectsLoaded(projectKeys);
+    const filters = store.getState().issueExplorerFilters;
+    const query = await vscode.window.showInputBox({
+      title: `Search ${formatProjectSelectionSummary(store.getState())} Issues`,
+      prompt: "Enter keywords for Jira issue search. Submit an empty value to clear the current search.",
+      ignoreFocusOut: true,
+      value: filters.query ?? "",
+    });
+
+    if (query === undefined) {
+      return;
+    }
+
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      store.setIssueSearchResults(undefined);
+      return;
+    }
+
+    await runAction(`Searching ${projectKeys.join(", ")} issues...`, async () => {
       requireSignedIn();
-      const result = await discoveryService.search(query.trim());
-      store.setSearchResults(result.issues);
+      const result = await discoveryService.search(trimmedQuery, projectKeys);
+      store.setIssueSearchResults(trimmedQuery, result.issues);
     });
   }
 
@@ -363,13 +394,88 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await vscode.env.openExternal(vscode.Uri.parse(url));
   }
 
+  async function pickIssueExplorerFilter(
+    filterKind: IssueFilterKind,
+  ): Promise<void> {
+    if (filterKind === "project") {
+      const selection = await vscode.window.showQuickPick(
+        store.getState().jiraProjects.map((project) => ({
+          label: project.project.name,
+          description: project.project.key,
+          picked: store.getState().selectedProjectKeys.includes(project.project.key),
+          value: project.project.key,
+        })),
+        {
+          title: "Select Jira Projects",
+          ignoreFocusOut: true,
+          canPickMany: true,
+        },
+      );
+
+      if (!selection) {
+        return;
+      }
+
+      const selectedProjectKeys = selection.map((item) => item.value);
+      store.setSelectedProjects(selectedProjectKeys);
+      store.setIssueExplorerFilters({
+        issueType: undefined,
+        status: undefined,
+        assigneeAccountId: undefined,
+        query: undefined,
+      });
+      store.setIssueSearchResults(undefined);
+
+      if (!selectedProjectKeys.length) {
+        return;
+      }
+
+      await runAction("Loading selected Jira projects...", async () => {
+        requireSignedIn();
+        await ensureSelectedProjectsLoaded(selectedProjectKeys);
+      });
+      return;
+    }
+
+    const selectedProjectKeys = store.getState().selectedProjectKeys;
+    if (!selectedProjectKeys.length) {
+      vscode.window.showWarningMessage("Select one or more Jira projects first.");
+      return;
+    }
+
+    await ensureSelectedProjectsLoaded(selectedProjectKeys);
+    const selection = await vscode.window.showQuickPick(
+      buildExplorerFilterQuickPickItems(store.getState(), filterKind),
+      {
+        title: `${formatProjectSelectionSummary(store.getState())} · ${getExplorerFilterTitle(filterKind)}`,
+        ignoreFocusOut: true,
+      },
+    );
+
+    if (!selection) {
+      return;
+    }
+
+    switch (filterKind) {
+      case "issueType":
+        store.setIssueExplorerFilters({ issueType: selection.value || undefined });
+        break;
+      case "status":
+        store.setIssueExplorerFilters({ status: selection.value || undefined });
+        break;
+      case "assignee":
+        store.setIssueExplorerFilters({ assigneeAccountId: selection.value || undefined });
+        break;
+    }
+  }
+
   async function getOrLoadSelectedIssue() {
     const selectedIssue = store.getState().selectedIssue;
     if (selectedIssue) {
       return selectedIssue;
     }
 
-    const firstIssue = store.getState().groups.flatMap((group) => group.issues)[0];
+    const firstIssue = getVisibleIssues(store.getState())[0];
     if (!firstIssue) {
       throw new Error("No Jira issue is selected.");
     }
@@ -505,6 +611,85 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       store.setBusyMessage(undefined);
     }
   }
+
+  async function ensureProjectLoaded(projectKey: string): Promise<void> {
+    const projectState = store.getProject(projectKey);
+    if (projectState?.isLoaded) {
+      return;
+    }
+
+    requireSignedIn();
+    const issues = await discoveryService.loadProjectIssues(projectKey);
+    store.setProjectBrowseIssues(projectKey, issues);
+  }
+
+  async function ensureSelectedProjectsLoaded(projectKeys: string[]): Promise<void> {
+    for (const projectKey of projectKeys) {
+      await ensureProjectLoaded(projectKey);
+    }
+  }
 }
 
 export function deactivate(): void {}
+
+function buildExplorerFilterQuickPickItems(
+  state: AppState,
+  filterKind: Exclude<IssueFilterKind, "project">,
+): Array<vscode.QuickPickItem & { value: string }> {
+  const { assignees, issueTypes, statuses } = getExplorerFilterOptions(state);
+  switch (filterKind) {
+    case "issueType":
+      return [
+        { label: "All Types", value: "" },
+        ...issueTypes.map((issueType) => ({
+          label: issueType,
+          value: issueType,
+        })),
+      ];
+    case "status":
+      return [
+        { label: "All Statuses", value: "" },
+        ...statuses.map((status) => ({
+          label: status,
+          value: status,
+        })),
+      ];
+    case "assignee":
+      return [
+        { label: "Anyone", value: "" },
+        ...assignees.map((assignee) => ({
+          label: assignee.displayName,
+          value: assignee.accountId,
+          description: assignee.accountId === UNASSIGNED_ASSIGNEE_ACCOUNT_ID ? "No assignee" : undefined,
+        })),
+      ];
+  }
+}
+
+function getExplorerFilterTitle(filterKind: Exclude<IssueFilterKind, "project">): string {
+  switch (filterKind) {
+    case "issueType":
+      return "Filter by Type";
+    case "status":
+      return "Filter by Status";
+    case "assignee":
+      return "Filter by Assignee";
+  }
+}
+
+function getExplorerFilterOptions(state: AppState) {
+  return getSelectedProjectFilterOptions(state.jiraProjects, state.selectedProjectKeys);
+}
+
+function getVisibleIssues(state: AppState) {
+  const browseIssues = collectSelectedProjectBrowseIssues(state.jiraProjects, state.selectedProjectKeys);
+  const options = getExplorerFilterOptions(state);
+  const filters = sanitizeProjectFilters(
+    state.issueExplorerFilters,
+    options.assignees,
+    options.issueTypes,
+    options.statuses,
+  );
+
+  return buildVisibleIssueList(browseIssues, filters, state.issueSearchResults);
+}

@@ -1,20 +1,12 @@
 import { strict as assert } from "node:assert";
 
 import {
-  buildAssignedIssuesJql,
   buildKeywordSearchJql,
   buildProjectIssuesJql,
   deriveWorkspaceSearchTerms,
 } from "../discovery/jql";
 
 describe("JQL builders", () => {
-  it("builds the assigned issues query", () => {
-    assert.equal(
-      buildAssignedIssuesJql(),
-      "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
-    );
-  });
-
   it("builds project query with escaped keys", () => {
     assert.equal(
       buildProjectIssuesJql(["TEAM", "OPS"]),

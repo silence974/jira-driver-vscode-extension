@@ -9,12 +9,20 @@ import {
   IssueGroup,
   IssueScoringResult,
   JiraIssueDetail,
+  JiraIssueSummary,
+  JiraProjectExplorerState,
+  JiraProjectFilterSelection,
+  JiraProjectSummary,
 } from "../models";
 
 export class JiraDriverStore {
   private state: AppState = {
     signedIn: false,
     groups: [],
+    jiraProjects: [],
+    selectedProjectKeys: [],
+    issueExplorerFilters: {},
+    issueSearchResults: undefined,
     confluenceSpaces: [],
     confluenceSearchResults: [],
   };
@@ -32,6 +40,80 @@ export class JiraDriverStore {
 
   public setGroups(groups: IssueGroup[]): void {
     this.patch({ groups });
+  }
+
+  public setIssueExplorerData(
+    projects: JiraProjectSummary[],
+  ): void {
+    const existingProjects = new Map(
+      this.state.jiraProjects.map((projectState) => [projectState.project.key, projectState]),
+    );
+
+    const jiraProjects = projects.map((project) => {
+      const existing = existingProjects.get(project.key);
+      if (!existing) {
+        return createProjectExplorerState(project);
+      }
+
+      return {
+        ...existing,
+        project,
+      };
+    });
+
+    const selectedProjectKeys = this.state.selectedProjectKeys.filter((projectKey) => (
+      jiraProjects.some((project) => project.project.key === projectKey)
+    ));
+
+    this.patch({
+      jiraProjects,
+      selectedProjectKeys,
+      issueExplorerFilters: selectedProjectKeys.length ? this.state.issueExplorerFilters : {},
+      issueSearchResults: selectedProjectKeys.length ? this.state.issueSearchResults : undefined,
+      groups: [],
+    });
+  }
+
+  public setSelectedProjects(selectedProjectKeys: string[]): void {
+    this.patch({
+      selectedProjectKeys,
+      issueExplorerFilters: selectedProjectKeys.length ? this.state.issueExplorerFilters : {},
+      issueSearchResults: selectedProjectKeys.length ? this.state.issueSearchResults : undefined,
+    });
+  }
+
+  public setProjectBrowseIssues(projectKey: string, browseIssues: JiraIssueSummary[]): void {
+    this.updateProject(projectKey, (project) => ({
+      ...project,
+      isLoaded: true,
+      browseIssues,
+    }));
+  }
+
+  public setIssueSearchResults(
+    query: string | undefined,
+    issueSearchResults?: JiraIssueSummary[],
+  ): void {
+    this.patch({
+      issueSearchResults: query ? issueSearchResults ?? [] : undefined,
+      issueExplorerFilters: {
+        ...this.state.issueExplorerFilters,
+        query: query?.trim() || undefined,
+      },
+    });
+  }
+
+  public setIssueExplorerFilters(filters: Partial<JiraProjectFilterSelection>): void {
+    this.patch({
+      issueExplorerFilters: {
+        ...this.state.issueExplorerFilters,
+        ...filters,
+      },
+    });
+  }
+
+  public getProject(projectKey: string): JiraProjectExplorerState | undefined {
+    return this.state.jiraProjects.find((project) => project.project.key === projectKey);
   }
 
   public setConfluenceSpaces(confluenceSpaces: ConfluenceSpaceSummary[]): void {
@@ -90,6 +172,10 @@ export class JiraDriverStore {
     this.state = {
       signedIn: false,
       groups: [],
+      jiraProjects: [],
+      selectedProjectKeys: [],
+      issueExplorerFilters: {},
+      issueSearchResults: undefined,
       confluenceSpaces: [],
       confluenceSearchResults: [],
     };
@@ -104,4 +190,23 @@ export class JiraDriverStore {
 
     this.emitter.fire(this.state);
   }
+
+  private updateProject(
+    projectKey: string,
+    updater: (project: JiraProjectExplorerState) => JiraProjectExplorerState,
+  ): void {
+    this.patch({
+      jiraProjects: this.state.jiraProjects.map((project) => (
+        project.project.key === projectKey ? updater(project) : project
+      )),
+    });
+  }
+}
+
+function createProjectExplorerState(project: JiraProjectSummary): JiraProjectExplorerState {
+  return {
+    project,
+    isLoaded: false,
+    browseIssues: [],
+  };
 }

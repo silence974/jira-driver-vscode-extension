@@ -1,10 +1,6 @@
 import { WorkspaceContext } from "../models";
 import { uniqueNonEmpty } from "../utils/strings";
 
-export function buildAssignedIssuesJql(): string {
-  return "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC";
-}
-
 export function buildProjectIssuesJql(projects: string[]): string {
   const escapedProjects = uniqueNonEmpty(projects).map((project) => `"${escapeJqlValue(project)}"`);
   if (!escapedProjects.length) {

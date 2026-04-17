@@ -29,14 +29,15 @@
 
 ### 3. Issue 发现与展示
 
-- 在 `Issue Explorer` TreeView 中展示以下分组：
-  - `Recommended`
-  - `Assigned to Me`
-  - `Project Results`
-  - `Search Results`
+- 在 `Issue Explorer` TreeView 中展示筛选优先结构：
+  - `Project`
+  - `Type`
+  - `Status`
+  - `Assignee`
+  - 当前筛选命中的 issue 列表
 - 发现逻辑包含：
-  - 我的待办：`assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC`
-  - 项目筛选：叠加 `project in (...)`
+  - 项目筛选：支持多选项目并叠加 `project in (...)`
+  - 项目内筛选：按 `issuetype`、`status`、`assignee`
   - 关键词检索：基于 `summary/description/comment`
   - 语义匹配：结合用户关键词和当前工作区上下文，对候选 issue 做重排
 
@@ -156,6 +157,7 @@
 - 已完成本地 F5 调试配置，仓库内已提供 `.vscode/launch.json` 和 `.vscode/tasks.json`。
 - 已补充本地调试引导：F5 会直接打开当前仓库，首次点击 `Sign In` 会引导填写 `jiraDriver.siteUrl`、`jiraDriver.auth.email` 和 Jira API token。
 - 已完成本地打包链路验证，可在 Node 20 下执行 `npm run package` 生成 `.vsix`。
+- 已将 Jira Explorer 调整为筛选优先结构：顶部提供 `Project / Type / Status / Assignee` 四个筛选节点，默认不显示任何项目内容，选中项目后结果直接显示在筛选项下方。
 - 已完成 Confluence 页面浏览与搜索的最小实现，包括 Space 列表、页面关键词搜索、按页面层级展开的目录树浏览，以及 Confluence 页面详情预览。
 - 已完成 Confluence 页面导出为 Markdown 的最小实现，支持从详情页或命令导出本地 `.md` 文件，并尽量保留页面元信息与链接。
 - 已精简主要 UI 操作入口：列表视图保留发现类操作，详情视图保留当前对象操作，移除了重复按钮入口。

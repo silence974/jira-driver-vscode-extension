@@ -8,6 +8,10 @@ describe("renderIssueDetailHtml", () => {
       {
         signedIn: true,
         groups: [],
+        jiraProjects: [],
+        selectedProjectKeys: [],
+        issueExplorerFilters: {},
+        issueSearchResults: undefined,
         confluenceSpaces: [],
         confluenceSearchResults: [],
         selectedIssue: {
