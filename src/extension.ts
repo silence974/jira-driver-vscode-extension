@@ -97,6 +97,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("jiraDriver.signIn", signIn),
     vscode.commands.registerCommand("jiraDriver.signOut", signOut),
     vscode.commands.registerCommand("jiraDriver.refreshIssues", refreshIssues),
+    vscode.commands.registerCommand("jiraDriver.lookupIssue", lookupIssue),
     vscode.commands.registerCommand("jiraDriver.searchIssues", searchIssues),
     vscode.commands.registerCommand("jiraDriver.refreshConfluence", refreshConfluence),
     vscode.commands.registerCommand("jiraDriver.searchConfluencePages", searchConfluencePages),
@@ -189,6 +190,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       requireSignedIn();
       const result = await discoveryService.search(trimmedQuery, projectKeys);
       store.setIssueSearchResults(trimmedQuery, result.issues);
+    });
+  }
+
+  async function lookupIssue(): Promise<void> {
+    const issueKey = await vscode.window.showInputBox({
+      title: "Lookup Jira Issue",
+      prompt: "Enter a Jira issue key (e.g. PROJ-123) to open it directly.",
+      ignoreFocusOut: true,
+      placeHolder: "PROJ-123",
+    });
+
+    if (!issueKey?.trim()) {
+      return;
+    }
+
+    await runAction(`Loading ${issueKey.trim()}...`, async () => {
+      requireSignedIn();
+      const issue = await jiraClient.getIssue(issueKey.trim());
+      store.setSelectedIssue(issue);
     });
   }
 
@@ -380,11 +400,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           getSettings().scoreThreshold,
         );
         store.setScoring(scoring);
-      }
-
-      if (!scoring.passesThreshold) {
-        store.setCommentDraft(buildMoreInfoComment(issue, scoring));
-        throw new Error(`Issue score ${scoring.totalScore} is below the threshold ${scoring.threshold}.`);
       }
 
       const workspaceContext = await workspaceContextCollector.collect(getSettings());

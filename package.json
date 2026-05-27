@@ -2,7 +2,7 @@
   "name": "jira-driver-vscode-extension",
   "displayName": "Jira Driver",
   "description": "A Jira-driven AI workflow extension for VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "silence974",
   "license": "Apache-2.0",
   "repository": {
@@ -24,6 +24,7 @@
     "onCommand:jiraDriver.signIn",
     "onCommand:jiraDriver.signOut",
     "onCommand:jiraDriver.refreshIssues",
+    "onCommand:jiraDriver.lookupIssue",
     "onCommand:jiraDriver.searchIssues",
     "onCommand:jiraDriver.refreshConfluence",
     "onCommand:jiraDriver.searchConfluencePages",
@@ -97,6 +98,15 @@
         "title": "Jira Driver: Prepare AI Fix"
       },
       {
+        "command": "jiraDriver.lookupIssue",
+        "title": "Jira Driver: Lookup Issue by Key",
+        "shortTitle": "Lookup",
+        "icon": {
+          "light": "media/light/lookup.svg",
+          "dark": "media/dark/lookup.svg"
+        }
+      },
+      {
         "command": "jiraDriver.setAiApiKey",
         "title": "Jira Driver: Set AI API Key",
         "shortTitle": "API Key",
@@ -152,9 +162,14 @@
           "group": "navigation@1"
         },
         {
-          "command": "jiraDriver.searchIssues",
+          "command": "jiraDriver.lookupIssue",
           "when": "view == jiraDriver.issueExplorer && jiraDriver.signedIn",
           "group": "navigation@2"
+        },
+        {
+          "command": "jiraDriver.searchIssues",
+          "when": "view == jiraDriver.issueExplorer && jiraDriver.signedIn",
+          "group": "navigation@3"
         },
         {
           "command": "jiraDriver.refreshConfluence",

@@ -157,6 +157,7 @@
 - 已完成本地 F5 调试配置，仓库内已提供 `.vscode/launch.json` 和 `.vscode/tasks.json`。
 - 已补充本地调试引导：F5 会直接打开当前仓库，首次点击 `Sign In` 会引导填写 `jiraDriver.siteUrl`、`jiraDriver.auth.email` 和 Jira API token。
 - 已完成本地打包链路验证，可在 Node 20 下执行 `npm run package` 生成 `.vsix`。
+- 当前本地可打包版本已升级到 `0.0.2`，应生成 `jira-driver-vscode-extension-0.0.2.vsix` 供安装验证。
 - 已将 Jira Explorer 调整为筛选优先结构：顶部提供 `Project / Type / Status / Assignee` 四个筛选节点，默认不显示任何项目内容，选中项目后结果直接显示在筛选项下方。
 - 已将 Confluence Explorer 调整为筛选优先结构：顶部提供 `Space` 多选筛选节点，默认不显示任何 Space 内容，选中 Space 后仅展示这些 Space 的页面树，搜索也只作用于已选 Space。
 - 已补 Confluence Space 全量分页拉取，并基于 Confluence Space `type` 区分项目/共享 Space 与个人 Space，列表和选择器都会优先展示项目/共享 Space。
