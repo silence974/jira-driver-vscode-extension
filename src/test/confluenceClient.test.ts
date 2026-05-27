@@ -356,7 +356,10 @@ describe("ConfluenceClient", () => {
       assert.equal(page.bodyHtml, "<p>Preview body</p>");
       assert.equal(page.bodyText, "Export body");
       assert.equal(page.attachments.length, 1);
-      assert.equal(page.attachments[0].downloadUrl, "https://example.atlassian.net/wiki/download/attachments/123/diagram.png");
+      assert.equal(
+        page.attachments[0].downloadUrl,
+        "https://example.atlassian.net/wiki/rest/api/content/123/child/attachment/att-1/download",
+      );
     } finally {
       globalThis.fetch = originalFetch;
     }

@@ -67,7 +67,7 @@ export function buildConfluenceExportLocation(
     rootDir,
     pageDir,
     markdownPath: path.join(pageDir, `${fileBaseName}.md`),
-    assetDir: path.join(pageDir, `${fileBaseName}.assets`),
+    assetDir: path.join(pageDir, "assets", fileBaseName),
   };
 }
 

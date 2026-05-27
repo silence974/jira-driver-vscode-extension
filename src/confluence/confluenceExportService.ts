@@ -26,8 +26,11 @@ interface ExportedAsset {
 
 export interface ConfluenceExportResult {
   markdownPath: string;
+  assetDirectory: string;
+  assetCount: number;
   attachmentCount: number;
   imageCount: number;
+  failedAssetCount: number;
 }
 
 export class ConfluenceExportService {
@@ -49,6 +52,7 @@ export class ConfluenceExportService {
     const usedFileNames = new Set<string>();
     const assetLookup = new Map<string, ExportedAsset>();
     const attachmentAssets: ExportedAsset[] = [];
+    let failedAssetCount = 0;
     let markdown = this.markdownExportService.buildMarkdown(page);
 
     if (options.downloadAttachments) {
@@ -62,6 +66,7 @@ export class ConfluenceExportService {
           usedFileNames,
         );
         if (!exportedAsset) {
+          failedAssetCount += 1;
           continue;
         }
 
@@ -77,7 +82,8 @@ export class ConfluenceExportService {
     const rewrites = new Map<string, string>();
 
     for (const link of extractMarkdownLinks(markdown)) {
-      if (!link.isImage && !options.downloadAttachments) {
+      const isImageLink = isImageLike(link.url, link.label, undefined, link.isImage);
+      if (!isImageLink && !options.downloadAttachments) {
         continue;
       }
 
@@ -87,7 +93,7 @@ export class ConfluenceExportService {
         continue;
       }
 
-      if (!link.isImage) {
+      if (!isImageLink) {
         continue;
       }
 
@@ -100,6 +106,7 @@ export class ConfluenceExportService {
         usedFileNames,
       );
       if (!exportedAsset) {
+        failedAssetCount += 1;
         continue;
       }
 
@@ -121,8 +128,11 @@ export class ConfluenceExportService {
     ).values()];
     return {
       markdownPath: location.markdownPath,
+      assetDirectory: location.assetDir,
+      assetCount: uniqueAssets.length,
       attachmentCount: attachmentAssets.length,
       imageCount: uniqueAssets.filter((asset) => asset.isImage).length,
+      failedAssetCount,
     };
   }
 

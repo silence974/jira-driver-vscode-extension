@@ -32,7 +32,7 @@ describe("export file helpers", () => {
     );
     assert.equal(
       location.assetDir,
-      "/tmp/repo/.jira-driver/confluence/产品部_PM/FICC相关产品/版本规划/V3.00.6_需求.assets",
+      "/tmp/repo/.jira-driver/confluence/产品部_PM/FICC相关产品/版本规划/assets/V3.00.6_需求",
     );
   });
 

@@ -309,27 +309,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         throw new Error("Confluence export requires an open workspace folder.");
       }
 
-      const downloadAttachments = page.attachments.length
-        ? (await vscode.window.showInformationMessage(
-          `Download all ${page.attachments.length} Confluence attachments for "${page.title}" as well?`,
-          {
-            modal: true,
-          },
-          "Download Attachments",
-          "Skip Attachments",
-        )) === "Download Attachments"
-        : false;
-
       const result = await confluenceExportService.exportPage(page, workspaceRoot, {
-        downloadAttachments,
+        downloadAttachments: true,
       });
       const destination = vscode.Uri.file(result.markdownPath);
 
-      void vscode.window.showInformationMessage(
+      const summaryMessage = [
         `Exported ${page.title} to ${destination.fsPath}.`,
-        "Open File",
-        "Reveal in Explorer",
-      ).then(async (followUp) => {
+        `Downloaded ${result.assetCount} assets to ${result.assetDirectory}.`,
+      ].join(" ");
+      const showSummary = result.failedAssetCount
+        ? vscode.window.showWarningMessage(
+          `${summaryMessage} ${result.failedAssetCount} assets failed to download (check Jira Driver output logs).`,
+          "Open File",
+          "Reveal in Explorer",
+        )
+        : vscode.window.showInformationMessage(
+          summaryMessage,
+          "Open File",
+          "Reveal in Explorer",
+        );
+
+      void showSummary.then(async (followUp) => {
         if (followUp === "Open File") {
           const document = await vscode.workspace.openTextDocument(destination);
           await vscode.window.showTextDocument(document, { preview: false });

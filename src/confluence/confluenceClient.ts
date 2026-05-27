@@ -481,15 +481,17 @@ function mapAttachmentSummary(
   baseUrl: string,
   pageId: string,
 ): ConfluenceAttachmentSummary {
+  const attachmentId = String(attachment.id ?? "").trim();
+  const restDownloadPath = `/wiki/rest/api/content/${encodeURIComponent(pageId)}/child/attachment/${encodeURIComponent(attachmentId)}/download`;
   return {
-    id: String(attachment.id ?? ""),
+    id: attachmentId,
     title: attachment.title ?? `attachment-${attachment.id}`,
     mediaType: attachment.mediaType,
     fileSize: attachment.fileSize,
     downloadUrl: resolveConfluenceUrl(
       baseUrl,
-      attachment.downloadLink ?? attachment._links?.download,
-      `/wiki/rest/api/content/${encodeURIComponent(pageId)}/child/attachment/${encodeURIComponent(String(attachment.id ?? ""))}/download`,
+      restDownloadPath,
+      attachment.downloadLink ?? attachment._links?.download ?? restDownloadPath,
     ),
     webUrl: attachment.webuiLink
       ? resolveConfluenceUrl(baseUrl, attachment.webuiLink, "/")

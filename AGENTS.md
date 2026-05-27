@@ -157,7 +157,7 @@
 - 已完成本地 F5 调试配置，仓库内已提供 `.vscode/launch.json` 和 `.vscode/tasks.json`。
 - 已补充本地调试引导：F5 会直接打开当前仓库，首次点击 `Sign In` 会引导填写 `jiraDriver.siteUrl`、`jiraDriver.auth.email` 和 Jira API token。
 - 已完成本地打包链路验证，可在 Node 20 下执行 `npm run package` 生成 `.vsix`。
-- 当前本地可打包版本已升级到 `0.0.2`，应生成 `jira-driver-vscode-extension-0.0.2.vsix` 供安装验证。
+- 当前本地可打包版本已升级到 `0.0.3`，应生成 `jira-driver-vscode-extension-0.0.3.vsix` 供安装验证。
 - 已将 Jira Explorer 调整为筛选优先结构：顶部提供 `Project / Type / Status / Assignee` 四个筛选节点，默认不显示任何项目内容，选中项目后结果直接显示在筛选项下方。
 - 已将 Confluence Explorer 调整为筛选优先结构：顶部提供 `Space` 多选筛选节点，默认不显示任何 Space 内容，选中 Space 后仅展示这些 Space 的页面树，搜索也只作用于已选 Space。
 - 已补 Confluence Space 全量分页拉取，并基于 Confluence Space `type` 区分项目/共享 Space 与个人 Space，列表和选择器都会优先展示项目/共享 Space。
@@ -165,8 +165,12 @@
 - 已补 Confluence 混合内容树支持：页面树展开时改用 direct-children 接口，能够显示 `folder` 节点（如 `Tools`）并对多类型子节点分页拉取。
 - 已将 Confluence Markdown 导出改为工作区内固定落盘：按 `Space / 页面目录树 / 页面名.md` 自动保存到 `.jira-driver/confluence/`，目录与文件名中的空格会替换为下划线。
 - 已补导出资源本地化：Confluence 导出会自动下载正文中的图片并重写 Markdown 图片链接；若页面存在附件，会先询问是否一并下载全部附件。
+- 已调整 Confluence 资源落盘结构：导出页资源统一写到同级 `assets/<页面名>/` 目录，并在导出完成提示中显示资源目录、下载数量和失败数量。
+- 已调整 Confluence 导出行为：默认自动下载页面附件（不再额外弹窗确认），并与正文图片一起改写为本地相对链接。
+- 已修复 Confluence 附件下载 401：附件下载改为优先使用 `/wiki/rest/api/content/{pageId}/child/attachment/{attachmentId}/download` REST 端点，避免走 `wiki/download/attachments/*` 的浏览器路径。
 - 已补 Jira handoff 图片附件落地：生成 `.jira-driver/tasks/<ISSUE_KEY>/README.md` 时会自动下载图片附件到任务目录，并在 README 中使用本地 Markdown 图片链接展示。
 - 已补 Jira handoff markdown 化：README 中的问题描述和评论会优先从 HTML 转成 Markdown，并自动下载其中的远程图片到任务目录后重写为本地相对链接。
+- 已补图片超链接本地化：无论 Jira handoff 还是 Confluence 导出，若 Markdown 中是普通链接但目标为图片资源（非 `![]()` 语法），也会自动下载并改写为本地相对路径。
 - 已完成 Confluence 页面导出为 Markdown 的最小实现，支持从详情页或命令导出本地 `.md` 文件，并尽量保留页面元信息与链接。
 - 已精简主要 UI 操作入口：列表视图保留发现类操作，详情视图保留当前对象操作，移除了重复按钮入口。
 

@@ -95,21 +95,27 @@ export class HandoffService {
     );
 
     for (const link of extractMarkdownLinks(markdown)) {
-      if (!link.isImage || rewrites.has(link.url) || isLocalAssetReference(link.url)) {
+      const isImageLink = isImageLike(link.url, link.label, undefined, link.isImage);
+      if (!isImageLink || rewrites.has(link.url) || isLocalAssetReference(link.url)) {
         continue;
       }
 
       const fileName = allocateUniqueFileName(fileNameFromUrl(link.url), usedFileNames);
       const absolutePath = path.join(assetDir, fileName);
 
-      await downloadRemoteAsset({
-        url: link.url,
-        destinationPath: absolutePath,
-        authProvider: this.authProvider,
-        logger: this.logger,
-      });
-
-      rewrites.set(link.url, toPosixRelativePath(folderPath, absolutePath));
+      try {
+        await downloadRemoteAsset({
+          url: link.url,
+          destinationPath: absolutePath,
+          authProvider: this.authProvider,
+          logger: this.logger,
+        });
+        rewrites.set(link.url, toPosixRelativePath(folderPath, absolutePath));
+      } catch (error) {
+        this.logger?.appendLine(
+          `Skipping Jira README image after download failure: ${link.url} ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
 
     return rewriteMarkdownLinks(markdown, rewrites);
